@@ -287,7 +287,8 @@ def main():
         json.dump(report_json, f, ensure_ascii=False, indent=2)
     print(f"\n✅ JSON出力: {json_path}")
 
-    txt_path = out_dir / f"full_report_{period.replace('年','').replace('月','')}.txt"
+    safe_period = period.replace('年','').replace('月','').replace('/','').replace('\\','')
+    txt_path = out_dir / f"full_report_{safe_period}.txt"
     with open(txt_path, "w", encoding="utf-8") as f:
         f.write(report)
     print(f"✅ テキストレポート: {txt_path}")
