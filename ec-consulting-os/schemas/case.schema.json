@@ -1,0 +1,28 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Knowledge Case",
+  "description": "成功・失敗施策のナレッジDBスキーマ",
+  "type": "object",
+  "required": ["id", "industry", "channel", "challenge", "action", "result"],
+  "properties": {
+    "id": { "type": "string" },
+    "industry": { "type": "string" },
+    "category": { "type": "string" },
+    "product": { "type": "string" },
+    "channel": { "type": "string" },
+    "challenge": { "type": "string", "description": "課題" },
+    "before": { "type": "string", "description": "施策前の状況" },
+    "action": { "type": "string", "description": "実施した施策" },
+    "after": { "type": "string", "description": "施策後の状況" },
+    "sales_impact": { "type": "string" },
+    "cvr_impact": { "type": "string" },
+    "profit_impact": { "type": "string" },
+    "success_factors": { "type": "array", "items": { "type": "string" } },
+    "failure_factors": { "type": "array", "items": { "type": "string" } },
+    "reproducible_conditions": { "type": "string" },
+    "cautions": { "type": "string" },
+    "evidence": { "type": "string" },
+    "tags": { "type": "array", "items": { "type": "string" } },
+    "created_at": { "type": "string", "format": "date" }
+  }
+}

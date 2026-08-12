@@ -1,0 +1,30 @@
+{
+  "client_id": "sample-client",
+  "company_name": "株式会社サンプル（仮）",
+  "industry": "美容・コスメ",
+  "product_categories": ["スキンケア", "美容液", "クリーム"],
+  "channels": ["rakuten", "amazon"],
+  "contract": {
+    "start_date": "2026-08-01",
+    "scope": ["楽天市場運営代行", "Amazon広告運用", "月次レポート"],
+    "monthly_fee": 500000
+  },
+  "targets": {
+    "monthly_sales": 8000000,
+    "monthly_gross_profit": 2400000,
+    "gross_margin_min": 30
+  },
+  "config": {
+    "dead_stock_days": 180,
+    "slow_stock_days": 90,
+    "target_roas": 400,
+    "target_gross_margin": 30,
+    "currency": "JPY",
+    "tax_included": true
+  },
+  "team": {
+    "consultant": "担当コンサルタント名",
+    "client_contact": "顧客担当者名",
+    "decision_maker": "顧客決裁者名"
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "WBS Task",
+  "type": "object",
+  "required": ["project", "category", "task", "priority", "owner", "deadline", "status"],
+  "properties": {
+    "project": { "type": "string" },
+    "category": { "type": "string" },
+    "task": { "type": "string" },
+    "background": { "type": "string" },
+    "priority": { "enum": ["P0", "P1", "P2", "P3"] },
+    "owner": { "type": "string" },
+    "support": { "type": "string" },
+    "start_date": { "type": "string", "format": "date" },
+    "deadline": { "type": "string", "format": "date" },
+    "status": { "enum": ["not_started", "in_progress", "review", "done", "blocked"] },
+    "deliverable": { "type": "string" },
+    "kpi": { "type": "string" },
+    "expected_impact": { "type": "string" },
+    "dependency": { "type": "array", "items": { "type": "string" } },
+    "blocker": { "type": "string" },
+    "next_action": { "type": "string" },
+    "result": { "type": "string" }
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Action Item",
+  "description": "施策・アクションアイテムの標準スキーマ",
+  "type": "object",
+  "required": ["id", "title", "priority", "owner", "deadline", "kpi"],
+  "properties": {
+    "id": { "type": "string" },
+    "title": { "type": "string" },
+    "background": { "type": "string", "description": "なぜこの施策が必要か" },
+    "priority": { "enum": ["P0", "P1", "P2", "P3"] },
+    "impact_score": { "type": "number", "minimum": 1, "maximum": 5 },
+    "confidence_score": { "type": "number", "minimum": 1, "maximum": 5 },
+    "speed_score": { "type": "number", "minimum": 1, "maximum": 5 },
+    "effort_score": { "type": "number", "minimum": 1, "maximum": 5 },
+    "priority_score": { "type": "number", "description": "Impact × Confidence × Speed ÷ Effort" },
+    "owner": { "type": "string" },
+    "support": { "type": "string" },
+    "start_date": { "type": "string", "format": "date" },
+    "deadline": { "type": "string", "format": "date" },
+    "status": { "enum": ["backlog", "in_progress", "review", "done", "cancelled"] },
+    "deliverable": { "type": "string" },
+    "kpi": { "type": "string" },
+    "expected_impact": { "type": "string" },
+    "dependency": { "type": "array", "items": { "type": "string" } },
+    "blocker": { "type": "string" },
+    "result": { "type": "string" }
+  }
+}

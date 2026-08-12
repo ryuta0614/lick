@@ -1,0 +1,22 @@
+# 顧客データ（機密情報）
+clients/*/data/raw/
+clients/*/data/processed/
+
+# 実際の顧客レポート（必要に応じてリポジトリに含める場合はコメントアウト）
+# clients/*/reports/
+# clients/*/analysis/
+
+# APIキー・認証情報
+.env
+*.env
+secrets/
+
+# OS・エディタ
+.DS_Store
+Thumbs.db
+*.swp
+
+# Python
+__pycache__/
+*.pyc
+.venv/

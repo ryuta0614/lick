@@ -1,0 +1,54 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Client Context",
+  "description": "顧客情報の標準スキーマ",
+  "type": "object",
+  "required": ["client_id", "company_name", "channels", "contract"],
+  "properties": {
+    "client_id": { "type": "string", "description": "顧客ID（ディレクトリ名と一致）" },
+    "company_name": { "type": "string" },
+    "industry": { "type": "string" },
+    "product_categories": { "type": "array", "items": { "type": "string" } },
+    "channels": {
+      "type": "array",
+      "items": { "enum": ["rakuten", "amazon", "yahoo", "tiktok_shop", "own_ec", "other"] }
+    },
+    "contract": {
+      "type": "object",
+      "properties": {
+        "start_date": { "type": "string", "format": "date" },
+        "scope": { "type": "array", "items": { "type": "string" } },
+        "monthly_fee": { "type": "number" }
+      }
+    },
+    "targets": {
+      "type": "object",
+      "description": "月次・年次目標",
+      "properties": {
+        "monthly_sales": { "type": "number" },
+        "monthly_gross_profit": { "type": "number" },
+        "gross_margin_min": { "type": "number", "description": "最低粗利率(%)" }
+      }
+    },
+    "config": {
+      "type": "object",
+      "description": "案件固有の閾値設定",
+      "properties": {
+        "dead_stock_days": { "type": "number", "default": 180 },
+        "slow_stock_days": { "type": "number", "default": 90 },
+        "target_roas": { "type": "number" },
+        "target_gross_margin": { "type": "number", "default": 20 },
+        "currency": { "type": "string", "default": "JPY" },
+        "tax_included": { "type": "boolean", "default": true }
+      }
+    },
+    "team": {
+      "type": "object",
+      "properties": {
+        "consultant": { "type": "string" },
+        "client_contact": { "type": "string" },
+        "decision_maker": { "type": "string" }
+      }
+    }
+  }
+}
