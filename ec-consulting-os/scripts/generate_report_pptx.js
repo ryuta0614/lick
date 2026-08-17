@@ -236,43 +236,45 @@ function addTag(slide, x, y, label, opts = {}) {
   }
 
   // 中央: "マクロジ" ロゴテキスト（白・大）
+  // Meiryo = Windows標準日本語フォント。文字間詰め。
   s.addText("マクロジ", {
-    x: 0, y: 1.05, w: "100%", h: 1.4,
-    fontSize: 64, bold: true, color: C.white, fontFace: "Calibri",
+    x: 0, y: 0.9, w: "100%", h: 1.5,
+    fontSize: 68, bold: true, color: C.white, fontFace: "Meiryo",
+    charSpacing: -2,
     align: "center", valign: "middle",
   });
 
   // 上区切りライン
   s.addShape(pres.ShapeType.rect, {
-    x: 1.5, y: 2.6, w: 7.0, h: 0.03,
-    fill: { color: C.white, transparency: 40 }, line: { color: C.white, transparency: 40 },
+    x: 1.2, y: 2.62, w: 7.6, h: 0.025,
+    fill: { color: C.white, transparency: 35 }, line: { color: C.white, transparency: 35 },
   });
 
   // クライアント名
   s.addText(`${meta.client}様`, {
-    x: 0, y: 2.72, w: "100%", h: 0.54,
-    fontSize: 22, bold: true, color: C.white, fontFace: "Calibri",
+    x: 0, y: 2.72, w: "100%", h: 0.56,
+    fontSize: 22, bold: true, color: C.white, fontFace: "Meiryo",
     align: "center", valign: "middle",
   });
 
   // ドキュメントタイトル
   s.addText(`${meta.channel} 売上分析レポート　${meta.period}`, {
-    x: 0, y: 3.28, w: "100%", h: 0.46,
-    fontSize: 18, bold: true, color: C.white, fontFace: "Calibri",
+    x: 0, y: 3.3, w: "100%", h: 0.48,
+    fontSize: 17, bold: true, color: C.white, fontFace: "Meiryo",
     align: "center", valign: "middle",
   });
 
   // 下区切りライン
   s.addShape(pres.ShapeType.rect, {
-    x: 1.5, y: 3.82, w: 7.0, h: 0.03,
-    fill: { color: C.white, transparency: 40 }, line: { color: C.white, transparency: 40 },
+    x: 1.2, y: 3.86, w: 7.6, h: 0.025,
+    fill: { color: C.white, transparency: 35 }, line: { color: C.white, transparency: 35 },
   });
 
   // コピーライト（フッター、バー無し）
   s.addText("© 2026 マクロジ Co., Ltd.", {
-    x: 0, y: 5.2, w: "100%", h: 0.28,
-    fontSize: 8, color: C.white, fontFace: "Calibri", align: "center", valign: "middle",
-    transparency: 30,
+    x: 0, y: 5.18, w: "100%", h: 0.3,
+    fontSize: 8.5, color: C.white, fontFace: "Meiryo", align: "center", valign: "middle",
+    transparency: 25,
   });
 }
 
