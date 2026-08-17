@@ -73,24 +73,33 @@ def get_credentials() -> Credentials:
 
 def find_spreadsheet_id(drive_service, shop_name: str, table_name: str) -> str | None:
     """店舗名 + テーブル名でスプレッドシートを Drive 検索"""
-    title = f"[{shop_name}shop]_forLM_[monthly]{table_name}"
+    # ブラケットを避け、部分一致で検索する
     query = (
-        f"name = '{title}' "
+        f"name contains '{shop_name}shop' "
+        f"and name contains '{table_name}' "
+        f"and name contains 'forLM' "
         f"and mimeType = 'application/vnd.google-apps.spreadsheet' "
         f"and trashed = false"
     )
-    result = drive_service.files().list(
-        q=query,
+    common_params = dict(
         fields="files(id, name)",
-        pageSize=5,
+        pageSize=10,
         includeItemsFromAllDrives=True,
         supportsAllDrives=True,
-        corpora="allDrives",
-    ).execute()
-    files = result.get("files", [])
-    if not files:
-        return None
-    return files[0]["id"]
+    )
+    # まず allDrives で検索
+    for corpora in ("allDrives", "user"):
+        try:
+            result = drive_service.files().list(
+                q=query, corpora=corpora, **common_params
+            ).execute()
+            files = result.get("files", [])
+            if files:
+                print(f"  （{corpora} で発見: {files[0]['name']}）")
+                return files[0]["id"]
+        except Exception:
+            pass
+    return None
 
 
 # ─────────────────────────────────────────────
