@@ -724,23 +724,28 @@ function addTag(slide, x, y, label, opts = {}) {
 
       // タイトル
       s.addText(a.title || "", {
-        x: cx + 0.12, y: cy + 0.05, w: cardW - 0.18, h: 0.3,
-        fontSize: 10, bold: true, color: C.navy, fontFace: "Calibri", valign: "middle",
+        x: cx + 0.12, y: cy + 0.05, w: cardW - 0.18, h: 0.34,
+        fontSize: 9.5, bold: true, color: C.navy, fontFace: "Calibri", valign: "middle",
       });
       // 期限
       if (a.deadline) {
         s.addText(`期限: ${a.deadline}`, {
-          x: cx + 0.12, y: cy + 0.35, w: cardW - 0.18, h: 0.22,
-          fontSize: 8, color: C.muted, fontFace: "Calibri",
+          x: cx + 0.12, y: cy + 0.38, w: cardW - 0.18, h: 0.2,
+          fontSize: 7.5, color: C.muted, fontFace: "Calibri",
         });
       }
-      // items
-      (a.items || []).forEach((item, ii) => {
-        s.addText(`• ${item}`, {
-          x: cx + 0.14, y: cy + 0.57 + ii * 0.26, w: cardW - 0.22, h: 0.24,
-          fontSize: 8.5, color: C.text, fontFace: "Calibri",
+      // items — 1つのテキストボックスに複数行でまとめて表示（折り返し対応）
+      const allItems = a.items || [];
+      if (allItems.length > 0) {
+        const textArr = allItems.map((item, idx) => ({
+          text: `• ${item}`,
+          options: { breakLine: idx < allItems.length - 1 },
+        }));
+        s.addText(textArr, {
+          x: cx + 0.14, y: cy + 0.56, w: cardW - 0.22, h: Math.max(0.1, cardAreaH - 0.60),
+          fontSize: 7.5, color: C.text, fontFace: "Calibri", valign: "top",
         });
-      });
+      }
     });
 
     curY += sh + secGap;
@@ -805,11 +810,12 @@ function addTag(slide, x, y, label, opts = {}) {
       x: tcols[2].x + 0.04, y: ry + 0.06, w: tcols[2].w - 0.08, h: rowH - 0.12,
       fontSize: 9.5, bold: true, color: C.navy, fontFace: "Calibri", valign: "middle",
     });
-    // 推奨施策（items[0]）
-    const itemText = (a.items || []).join("  /  ");
+    // 推奨施策（最大2件まで表示）
+    const shownItems = (a.items || []).slice(0, 2);
+    const itemText = shownItems.join(" / ") + ((a.items || []).length > 2 ? "…" : "");
     s.addText(itemText, {
-      x: tcols[3].x + 0.04, y: ry + 0.06, w: tcols[3].w - 0.08, h: rowH - 0.12,
-      fontSize: 8.5, color: C.text, fontFace: "Calibri", valign: "middle",
+      x: tcols[3].x + 0.04, y: ry + 0.04, w: tcols[3].w - 0.1, h: rowH - 0.08,
+      fontSize: 7.5, color: C.text, fontFace: "Calibri", valign: "middle",
     });
     // 優先度
     s.addText(a.deadline || "—", {
