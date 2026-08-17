@@ -26,3 +26,7 @@ __pycache__/
 # Node.js
 node_modules/
 package-lock.json
+
+# 生成済みレポート（機密）
+*.pptx
+*.xlsx
