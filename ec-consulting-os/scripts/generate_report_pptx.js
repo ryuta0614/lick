@@ -393,7 +393,9 @@ function addFrame(slide, pageNum, title) {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 出力
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-const periodSlug = (meta.period || "report").replace(/年|月/g, "");
+const periodSlug = (meta.period || "report")
+  .replace(/(\d+)年(\d+)月/, (_, y, m) => `${y}${m.padStart(2, "0")}`)
+  .replace(/年|月/g, "");
 const outDir = jsonArg ? path.dirname(jsonArg) : ".";
 const outFile = path.join(outDir, `ec_report_${periodSlug}.pptx`);
 
