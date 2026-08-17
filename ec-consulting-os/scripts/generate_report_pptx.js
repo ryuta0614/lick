@@ -786,7 +786,9 @@ function addTag(slide, x, y, label, opts = {}) {
     });
   });
 
-  const rowH = 0.54;
+  // 行数に応じて行高さを動的に計算（テーブル全体が次回確認事項ボックス上端 4.8" に収まるよう）
+  const tableAvailH = 3.80; // ヘッダー除く最大高さ
+  const rowH = Math.min(0.62, Math.max(0.44, tableAvailH / Math.max(actions.length, 1)));
   const priBg = { P0: C.redLight, P1: "FFF8EE", P2: C.white };
   const priTextColor = { P0: C.red, P1: C.orange, P2: C.muted };
 
@@ -812,12 +814,17 @@ function addTag(slide, x, y, label, opts = {}) {
       x: tcols[2].x + 0.04, y: ry + 0.06, w: tcols[2].w - 0.08, h: rowH - 0.12,
       fontSize: 9.5, bold: true, color: C.navy, fontFace: "Calibri", valign: "middle",
     });
-    // 推奨施策（最大2件まで表示）
-    const shownItems = (a.items || []).slice(0, 2);
-    const itemText = shownItems.join(" / ") + ((a.items || []).length > 2 ? "…" : "");
-    s.addText(itemText, {
+    // 推奨施策（1件目のみ・40文字で切り詰め）
+    const raw0 = (a.items || [])[0] || "";
+    const item0 = raw0.length > 40 ? raw0.slice(0, 40) + "…" : raw0;
+    const raw1 = (a.items || [])[1] || "";
+    const item1 = raw1 ? (raw1.length > 38 ? raw1.slice(0, 38) + "…" : raw1) : "";
+    const itemLines = item1
+      ? [{ text: item0, options: { breakLine: true } }, { text: item1 }]
+      : item0;
+    s.addText(itemLines, {
       x: tcols[3].x + 0.04, y: ry + 0.04, w: tcols[3].w - 0.1, h: rowH - 0.08,
-      fontSize: 7.5, color: C.text, fontFace: "Calibri", valign: "middle",
+      fontSize: 7, color: C.text, fontFace: "Meiryo", valign: "middle",
     });
     // 優先度
     s.addText(a.deadline || "—", {
@@ -827,9 +834,9 @@ function addTag(slide, x, y, label, opts = {}) {
     });
   });
 
-  // 次回確認事項ボックス
-  const boxY = tableTop + hdrH + actions.length * rowH + 0.14;
-  const boxH = Math.max(0.5, 5.27 - boxY);
+  // 次回確認事項ボックス（テーブル直下に配置、フッター上端5.27"まで）
+  const boxY = tableTop + hdrH + actions.length * rowH + 0.1;
+  const boxH = Math.max(0.48, 5.27 - boxY);
   s.addShape(pres.ShapeType.rect, {
     x: 0.28, y: boxY, w: 9.44, h: boxH,
     fill: { color: C.tealLight }, line: { color: C.teal, pt: 1 },
