@@ -80,7 +80,12 @@ def find_spreadsheet_id(drive_service, shop_name: str, table_name: str) -> str |
         f"and trashed = false"
     )
     result = drive_service.files().list(
-        q=query, fields="files(id, name)", pageSize=5
+        q=query,
+        fields="files(id, name)",
+        pageSize=5,
+        includeItemsFromAllDrives=True,
+        supportsAllDrives=True,
+        corpora="allDrives",
     ).execute()
     files = result.get("files", [])
     if not files:
