@@ -10,6 +10,8 @@ clients/*/data/processed/
 .env
 *.env
 secrets/
+scripts/credentials.json
+scripts/token.json
 
 # OS・エディタ
 .DS_Store

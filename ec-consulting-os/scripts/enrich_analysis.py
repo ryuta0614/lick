@@ -17,6 +17,16 @@ except ImportError:
     print("   pip install anthropic")
     sys.exit(1)
 
+# .env ファイルから環境変数を読み込む（python-dotenv 不要の軽量実装）
+_env_path = Path(__file__).parent / ".env"
+if _env_path.exists():
+    with open(_env_path, encoding="utf-8") as _f:
+        for _line in _f:
+            _line = _line.strip()
+            if _line and not _line.startswith("#") and "=" in _line:
+                _k, _v = _line.split("=", 1)
+                os.environ.setdefault(_k.strip(), _v.strip())
+
 
 SYSTEM_PROMPT = """あなたはECコンサルタントです。
 楽天市場の月次KPIデータを受け取り、以下の3点を日本語で出力してください。
