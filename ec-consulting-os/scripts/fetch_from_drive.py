@@ -75,7 +75,7 @@ def find_spreadsheet_id(drive_service, shop_name: str, table_name: str) -> str |
     """店舗名 + テーブル名でスプレッドシートを Drive 検索"""
     title = f"[{shop_name}shop]_forLM_[monthly]{table_name}"
     query = (
-        f"title = '{title}' "
+        f"name = '{title}' "
         f"and mimeType = 'application/vnd.google-apps.spreadsheet' "
         f"and trashed = false"
     )
