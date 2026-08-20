@@ -113,15 +113,31 @@ def enrich(json_path: str) -> None:
 
     raw = response.content[0].text.strip()
 
-    # JSONブロック抽出（```json ... ``` に囲まれている場合も対応）
+    # JSONブロック抽出（```json ... ``` や JSON後の補足テキストにも対応）
     if raw.startswith("```"):
         lines = raw.splitlines()
-        raw = "\n".join(lines[1:-1])
+        # 最初の ``` 行と最後の ``` 行を除去
+        inner = "\n".join(lines[1:])
+        end = inner.find("```")
+        raw = inner[:end].strip() if end != -1 else inner.strip()
+
+    # { ... } の範囲だけを抽出（JSON後に補足テキストが続く場合に対応）
+    start = raw.find("{")
+    if start != -1:
+        depth = 0
+        for i, ch in enumerate(raw[start:], start):
+            if ch == "{":
+                depth += 1
+            elif ch == "}":
+                depth -= 1
+                if depth == 0:
+                    raw = raw[start:i + 1]
+                    break
 
     try:
         enriched = json.loads(raw)
     except json.JSONDecodeError as e:
-        print(f"❌ Claude の返答がJSONではありませんでした:\n{raw}")
+        print(f"❌ Claude の返答がJSONではありませんでした:\n{raw[:500]}")
         print(f"   エラー: {e}")
         sys.exit(1)
 
