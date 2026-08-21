@@ -1,0 +1,421 @@
+// Social Growth OS — Prisma schema
+// See /CLAUDE.md sections 6, 9-27 for the product spec this models.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum Platform {
+  X
+  THREADS
+  INSTAGRAM
+}
+
+enum PostStatus {
+  DRAFT
+  REVIEW
+  APPROVED
+  SCHEDULED
+  QUEUED
+  PUBLISHING
+  PUBLISHED
+  FAILED
+  REJECTED
+}
+
+enum ApprovalMode {
+  MANUAL
+  SEMI_AUTO
+  AUTO
+}
+
+// ---------------------------------------------------------------------------
+// Core / accounts
+// ---------------------------------------------------------------------------
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspaces WorkspaceUser[]
+}
+
+model Workspace {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users       WorkspaceUser[]
+  accounts    SocialAccount[]
+  personas    BrandPersona[]
+  trends      Trend[]
+  ideas       ContentIdea[]
+  posts       Post[]
+  strategies  Strategy[]
+  experiments Experiment[]
+  campaigns   Campaign[]
+}
+
+model WorkspaceUser {
+  id          String   @id @default(cuid())
+  userId      String
+  workspaceId String
+  role        String   @default("OWNER")
+  createdAt   DateTime @default(now())
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, workspaceId])
+  @@index([workspaceId])
+}
+
+model SocialAccount {
+  id           String       @id @default(cuid())
+  workspaceId  String
+  platform     Platform
+  externalId   String
+  username     String?
+  displayName  String?
+  approvalMode ApprovalMode @default(MANUAL)
+  active       Boolean      @default(true)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  workspace  Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  credential PlatformCredential?
+  posts      Post[]
+
+  @@unique([platform, externalId])
+  @@index([workspaceId, platform])
+}
+
+model PlatformCredential {
+  id              String    @id @default(cuid())
+  socialAccountId String    @unique
+  accessTokenEnc  String
+  refreshTokenEnc String?
+  expiresAt       DateTime?
+  scopes          String[]
+  needsReconnect  Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  socialAccount SocialAccount @relation(fields: [socialAccountId], references: [id], onDelete: Cascade)
+}
+
+model BrandPersona {
+  id          String   @id @default(cuid())
+  workspaceId String
+  name        String
+  niche       String
+  audience    String
+  tone        Json
+  expertise   Json?
+  beliefs     Json?
+  avoid       Json?
+  ctaStyle    String?
+  products    Json?
+  landingPages Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+}
+
+// ---------------------------------------------------------------------------
+// Trend collection & analysis
+// ---------------------------------------------------------------------------
+
+model Trend {
+  id          String    @id @default(cuid())
+  workspaceId String
+  source      String
+  externalId  String?
+  title       String
+  text        String?
+  url         String?
+  publishedAt DateTime?
+  score       Float?
+  velocity    Float?
+  rawData     Json?
+  createdAt   DateTime  @default(now())
+
+  workspace Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  analyses  TrendAnalysis[]
+
+  @@index([workspaceId, createdAt])
+  @@index([source, externalId])
+}
+
+model TrendAnalysis {
+  id               String   @id @default(cuid())
+  trendId          String
+  topic            String
+  summary          String
+  reasonTrending   String?
+  targetAudience   String?
+  opportunityScore Float
+  contentAngles    Json
+  risks            Json?
+  evidence         Json?
+  createdAt        DateTime @default(now())
+
+  trend Trend         @relation(fields: [trendId], references: [id], onDelete: Cascade)
+  ideas ContentIdea[]
+
+  @@index([trendId])
+}
+
+// ---------------------------------------------------------------------------
+// Ideas & content
+// ---------------------------------------------------------------------------
+
+model ContentIdea {
+  id               String   @id @default(cuid())
+  workspaceId      String
+  trendAnalysisId  String?
+  title            String
+  topic            String
+  angle            String
+  audience         String?
+  hookType         String?
+  emotion          String?
+  contentType      String?
+  whyNow           String?
+  conversionIntent String?
+  originalityNotes String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  workspace     Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  trendAnalysis TrendAnalysis? @relation(fields: [trendAnalysisId], references: [id])
+  posts         Post[]
+
+  @@index([workspaceId, createdAt])
+  @@index([topic])
+}
+
+model Post {
+  id                      String     @id @default(cuid())
+  workspaceId             String
+  socialAccountId         String
+  ideaId                  String?
+  platform                Platform
+  status                  PostStatus @default(DRAFT)
+  text                    String?
+  contentHash             String
+  scheduledAt             DateTime?
+  publishedAt             DateTime?
+  externalId              String?
+  externalUrl             String?
+  generationPromptVersion String?
+  errorMessage            String?
+  createdAt               DateTime   @default(now())
+  updatedAt               DateTime   @updatedAt
+
+  workspace     Workspace               @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  socialAccount SocialAccount           @relation(fields: [socialAccountId], references: [id], onDelete: Cascade)
+  idea          ContentIdea?            @relation(fields: [ideaId], references: [id])
+  variants      PostVariant[]
+  scores        PostScore[]
+  analytics     PostAnalyticsSnapshot[]
+  conversions   Conversion[]
+
+  // Prevents the same generated text from ever being scheduled/published
+  // twice for the same account, even if a retry re-runs the publish job.
+  @@unique([socialAccountId, contentHash])
+  @@unique([platform, externalId])
+  @@index([workspaceId, status])
+  @@index([scheduledAt])
+}
+
+model PostVariant {
+  id        String   @id @default(cuid())
+  postId    String
+  text      String
+  hookType  String?
+  rank      Int?
+  selected  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+}
+
+model PostScore {
+  id                  String   @id @default(cuid())
+  postId              String
+  hook                Float
+  originality         Float
+  usefulness          Float
+  clarity             Float
+  shareability        Float
+  audienceFit         Float
+  specificity         Float
+  conversionPotential Float
+  brandFit            Float
+  risk                Float
+  qualityScore        Float
+  reasoning           Json?
+  createdAt           DateTime @default(now())
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([postId, createdAt])
+}
+
+model PostAnalyticsSnapshot {
+  id              String   @id @default(cuid())
+  postId          String
+  capturedAt      DateTime @default(now())
+  impressions     Int?
+  likes           Int?
+  replies         Int?
+  shares          Int?
+  saves           Int?
+  profileVisits   Int?
+  linkClicks      Int?
+  followersGained Int?
+  rawData         Json?
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([postId, capturedAt])
+}
+
+// ---------------------------------------------------------------------------
+// Strategy & experimentation
+// ---------------------------------------------------------------------------
+
+model Strategy {
+  id               String   @id @default(cuid())
+  workspaceId      String
+  periodStart      DateTime
+  periodEnd        DateTime
+  winningTopics    Json?
+  losingTopics     Json?
+  winningHooks     Json?
+  losingHooks      Json?
+  winningFormats   Json?
+  recommendedMix   Json?
+  recommendedTimes Json?
+  experiments      Json?
+  observations     Json?
+  confidence       Float?
+  createdAt        DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, createdAt])
+}
+
+model Experiment {
+  id            String    @id @default(cuid())
+  workspaceId   String
+  name          String
+  hypothesis    String
+  variable      String
+  control       Json
+  variant       Json
+  primaryMetric String
+  startDate     DateTime?
+  endDate       DateTime?
+  result        Json?
+  createdAt     DateTime  @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, startDate])
+}
+
+// ---------------------------------------------------------------------------
+// Revenue attribution
+// ---------------------------------------------------------------------------
+
+model Campaign {
+  id          String   @id @default(cuid())
+  workspaceId String
+  name        String
+  slug        String
+  createdAt   DateTime @default(now())
+
+  workspace   Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  conversions Conversion[]
+
+  @@unique([workspaceId, slug])
+}
+
+model Conversion {
+  id         String   @id @default(cuid())
+  campaignId String?
+  postId     String?
+  type       String
+  value      Decimal? @db.Decimal(12, 2)
+  currency   String   @default("JPY")
+  externalId String?
+  occurredAt DateTime
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  campaign Campaign? @relation(fields: [campaignId], references: [id])
+  post     Post?     @relation(fields: [postId], references: [id])
+
+  @@index([postId, occurredAt])
+  @@index([campaignId, occurredAt])
+}
+
+// ---------------------------------------------------------------------------
+// Observability
+// ---------------------------------------------------------------------------
+
+model AIExecution {
+  id            String   @id @default(cuid())
+  provider      String
+  model         String
+  operation     String
+  promptVersion String?
+  temperature   Float?
+  inputTokens   Int?
+  outputTokens  Int?
+  estimatedCost Decimal? @db.Decimal(12, 6)
+  traceId       String?
+  success       Boolean
+  errorMessage  String?
+  createdAt     DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([traceId])
+}
+
+model JobExecution {
+  id            String    @id @default(cuid())
+  queue         String
+  jobName       String
+  externalJobId String?
+  status        String
+  attempts      Int       @default(0)
+  errorMessage  String?
+  startedAt     DateTime?
+  finishedAt    DateTime?
+  createdAt     DateTime  @default(now())
+
+  @@index([queue, status])
+  @@index([externalJobId])
+}
