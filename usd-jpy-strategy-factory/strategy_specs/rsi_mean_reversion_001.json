@@ -1,0 +1,52 @@
+{
+  "strategy_id": "rsi_mean_reversion_001",
+  "name": "RSI Mean Reversion",
+  "symbol": "USDJPY",
+  "timeframe": "15m",
+  "indicators": [
+    {
+      "type": "RSI",
+      "period": 14,
+      "source": "close",
+      "params": {}
+    }
+  ],
+  "long_entry": {
+    "condition": "RSI14 crosses above 30",
+    "execution": "next_bar_market",
+    "indicator_a": "RSI14",
+    "operator": "crosses_above",
+    "indicator_b": "30"
+  },
+  "short_entry": {
+    "condition": "RSI14 crosses below 70",
+    "execution": "next_bar_market",
+    "indicator_a": "RSI14",
+    "operator": "crosses_below",
+    "indicator_b": "70"
+  },
+  "exit": {
+    "stop_loss_pips": 25.0,
+    "take_profit_pips": 25.0,
+    "trailing_stop_pips": null
+  },
+  "position_management": {
+    "max_positions": 1,
+    "pyramiding": false,
+    "reverse_on_opposite_signal": true
+  },
+  "risk": {
+    "position_sizing": "fixed_lot",
+    "fixed_lot": 0.01
+  },
+  "anti_repaint": true,
+  "danger_level": "SAFE",
+  "review_status": "OK",
+  "source": {
+    "source_file": "pine_inputs/rsi_mean_reversion.pine",
+    "pine_version": 5,
+    "script_kind": "strategy",
+    "imported_at": "2026-08-21T09:07:14.699981Z"
+  },
+  "version": 1
+}

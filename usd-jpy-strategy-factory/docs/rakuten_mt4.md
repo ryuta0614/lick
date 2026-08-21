@@ -48,6 +48,21 @@ MT4 disconnected
 `NOT_AVAILABLE` 系の結果を返す。実機での動作確認は Phase 6 でユーザー自身の
 Windows + 楽天MT4環境にて行うこと。
 
+## 生成EAのデプロイ手順（ユーザー環境）
+
+1. `mql4/shared/*.mqh` を `<MT4データフォルダ>/MQL4/Include/` へコピーする。
+2. `mql4/generated/<strategy_id>.mq4` を `<MT4データフォルダ>/MQL4/Experts/` へコピーする。
+3. MetaEditor でコンパイル（`F7`）し、エラー・警告がないことを確認する。
+4. Strategy Tester で `RunMode=BACKTEST` のままバックテストを実行する
+   （`RunMode` はデフォルトで `BACKTEST` であり、Strategy Tester外では
+   新規注文を送らない設計。§RiskEngine_CanPlaceOrder 参照）。
+5. デモ口座で検証する場合のみ `RunMode=DEMO` に変更する。デモ口座に接続されて
+   いない状態で `RunMode=DEMO` にした場合、EAは新規注文を拒否する。
+6. `RunMode=LIVE` は本プロジェクトの検証フロー（Phase 7）を全て満たすまで
+   絶対に選択しないこと。`RunMode=LIVE` かつ `EnableLiveTrading=true` が
+   両方揃わない限り、EAはいかなる状況でも新規注文を送らない
+   （`mql4/shared/RiskEngine.mqh` の `RiskEngine_CanPlaceOrder()`）。
+
 ## デモ運用の最低期間
 
 Phase 6 のデモ運用は最低4週間（`config/default.yaml` の `demo.min_weeks_before_live_review`、

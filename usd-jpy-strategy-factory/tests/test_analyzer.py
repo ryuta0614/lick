@@ -22,6 +22,10 @@ def test_ema_cross_produces_valid_spec_matching_golden_rules():
     assert spec.timeframe == "1h"
     assert spec.long_entry.condition == "EMA20 crosses above EMA50"
     assert spec.short_entry.condition == "EMA20 crosses below EMA50"
+    assert spec.long_entry.indicator_a == "EMA20"
+    assert spec.long_entry.operator == "crosses_above"
+    assert spec.long_entry.indicator_b == "EMA50"
+    assert spec.short_entry.operator == "crosses_below"
     assert spec.exit.stop_loss_pips == 20
     assert spec.exit.take_profit_pips == 40
     assert [i.type for i in spec.indicators] == ["EMA", "EMA"]
@@ -34,7 +38,11 @@ def test_rsi_mean_reversion_produces_valid_spec():
     spec = outcome.spec
     assert spec is not None
     assert spec.timeframe == "15m"
-    assert "RSI14" in spec.long_entry.condition
+    assert spec.long_entry.condition == "RSI14 crosses above 30"
+    assert spec.long_entry.indicator_a == "RSI14"
+    assert spec.long_entry.operator == "crosses_above"
+    assert spec.long_entry.indicator_b == "30"
+    assert spec.short_entry.condition == "RSI14 crosses below 70"
     assert spec.exit.stop_loss_pips == 25
     assert spec.exit.take_profit_pips == 25
 

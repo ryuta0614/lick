@@ -1,0 +1,58 @@
+{
+  "strategy_id": "ema_cross_001",
+  "name": "EMA20/50 Crossover",
+  "symbol": "USDJPY",
+  "timeframe": "1h",
+  "indicators": [
+    {
+      "type": "EMA",
+      "period": 20,
+      "source": "close",
+      "params": {}
+    },
+    {
+      "type": "EMA",
+      "period": 50,
+      "source": "close",
+      "params": {}
+    }
+  ],
+  "long_entry": {
+    "condition": "EMA20 crosses above EMA50",
+    "execution": "next_bar_market",
+    "indicator_a": "EMA20",
+    "operator": "crosses_above",
+    "indicator_b": "EMA50"
+  },
+  "short_entry": {
+    "condition": "EMA20 crosses below EMA50",
+    "execution": "next_bar_market",
+    "indicator_a": "EMA20",
+    "operator": "crosses_below",
+    "indicator_b": "EMA50"
+  },
+  "exit": {
+    "stop_loss_pips": 20.0,
+    "take_profit_pips": 40.0,
+    "trailing_stop_pips": null
+  },
+  "position_management": {
+    "max_positions": 1,
+    "pyramiding": false,
+    "reverse_on_opposite_signal": true
+  },
+  "risk": {
+    "position_sizing": "fixed_lot",
+    "fixed_lot": 0.01
+  },
+  "anti_repaint": true,
+  "danger_level": "SAFE",
+  "review_status": "OK",
+  "source": {
+    "source_file": "pine_inputs/ema_cross.pine",
+    "pine_version": 5,
+    "script_kind": "strategy",
+    "imported_at": "2026-08-21T09:07:14.697293Z"
+  },
+  "version": 1
+}

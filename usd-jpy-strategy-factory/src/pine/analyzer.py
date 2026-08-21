@@ -99,6 +99,21 @@ def _build_indicators(
     return indicators, labels
 
 
+def _resolve_token(token: str, raw: RawPineStrategy, labels: dict[str, str]) -> str:
+    """Resolve a Pine variable name to an indicator label or a numeric literal.
+
+    Falls back to the raw token (e.g. an unrecognized variable name) when
+    neither resolution succeeds; callers should treat that case as
+    unresolvable for structured (MQL4-generatable) purposes.
+    """
+
+    if token in labels:
+        return labels[token]
+    if token in raw.inputs:
+        return raw.inputs[token].default
+    return token
+
+
 def _describe_condition(
     entry: PineEntry, raw: RawPineStrategy, labels: dict[str, str], notes: list[str]
 ) -> EntryRule | None:
@@ -110,10 +125,39 @@ def _describe_condition(
         return None
 
     cond = raw.conditions[entry.condition_var]
-    lhs_label = labels.get(cond.lhs, cond.lhs)
-    rhs_label = labels.get(cond.rhs, cond.rhs)
+    lhs_resolved = _resolve_token(cond.lhs, raw, labels)
+    rhs_resolved = _resolve_token(cond.rhs, raw, labels)
     verb = _CROSS_DESCRIPTION[cond.func]
-    return EntryRule(condition=f"{lhs_label} {verb} {rhs_label}", execution="next_bar_market")
+    condition_text = f"{lhs_resolved} {verb} {rhs_resolved}"
+
+    lhs_structured = lhs_resolved in labels.values() or _is_numeric(lhs_resolved)
+    rhs_structured = rhs_resolved in labels.values() or _is_numeric(rhs_resolved)
+    if not (lhs_structured and rhs_structured):
+        notes.append(
+            f"entry '{entry.id}' condition references an unresolved term "
+            f"('{cond.lhs}' or '{cond.rhs}'); condition text was kept but structured "
+            "indicator_a/operator/indicator_b were left unset"
+        )
+        return EntryRule(condition=condition_text, execution="next_bar_market")
+
+    operator: Literal["crosses_above", "crosses_below"] = (
+        "crosses_above" if cond.func == "crossover" else "crosses_below"
+    )
+    return EntryRule(
+        condition=condition_text,
+        execution="next_bar_market",
+        indicator_a=lhs_resolved,
+        operator=operator,
+        indicator_b=rhs_resolved,
+    )
+
+
+def _is_numeric(token: str) -> bool:
+    try:
+        float(token)
+    except ValueError:
+        return False
+    return True
 
 
 def _resolve_pips(expr: str | None, raw: RawPineStrategy, hints: tuple[str, ...]) -> float | None:

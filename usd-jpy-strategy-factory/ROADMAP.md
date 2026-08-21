@@ -3,22 +3,23 @@
 進捗管理用。各 Phase 完了時にチェックし、Completed / Changed files / Tests / Known issues /
 Next step をコミットメッセージまたは本ファイルの更新で報告する。
 
-- [ ] **Phase 1 — StrategySpec 基盤**
-  - [ ] `src/strategies/schema.py`（StrategySpec Pydantic モデル）
-  - [ ] `src/strategies/validator.py`
-  - [ ] `src/pine/parser.py`
-  - [ ] `src/pine/analyzer.py`
-  - [ ] `src/pine/anti_repaint.py`
-  - [ ] Golden Strategy #1: EMA20/50 Crossover の `.pine` サンプルと変換
-  - [ ] Golden Strategy #2: RSI Mean Reversion の `.pine` サンプルと変換
-  - [ ] pytest によるユニットテスト
-  - 完了条件: Pine Script → StrategySpec JSON が動く
+- [x] **Phase 1 — StrategySpec 基盤**
+  - [x] `src/strategies/schema.py`（StrategySpec Pydantic モデル）
+  - [x] `src/strategies/validator.py`
+  - [x] `src/pine/parser.py`
+  - [x] `src/pine/analyzer.py`
+  - [x] `src/pine/anti_repaint.py`
+  - [x] Golden Strategy #1: EMA20/50 Crossover の `.pine` サンプルと変換
+  - [x] Golden Strategy #2: RSI Mean Reversion の `.pine` サンプルと変換
+  - [x] pytest によるユニットテスト（25件）
+  - 完了条件: Pine Script → StrategySpec JSON が動く -- 達成済み
 
-- [ ] **Phase 2 — MQL4 Generator**
-  - [ ] `mql4/shared/RiskEngine.mqh` / `Indicators.mqh` / `Logger.mqh`
-  - [ ] `src/generators/mql4_generator.py`
-  - [ ] 生成 EA の構文チェック（静的チェック。実機コンパイルはこの環境では不可）
-  - 完了条件: StrategySpec → EA が生成される（実機コンパイルは Phase 6 以降 / ユーザー環境で確認）
+- [x] **Phase 2 — MQL4 Generator**
+  - [x] `mql4/shared/RiskEngine.mqh` / `Indicators.mqh` / `Logger.mqh`
+  - [x] `src/generators/mql4_generator.py`
+  - [x] 生成 EA の構文チェック（静的チェック=波括弧・丸括弧の対応検証。実機コンパイルはこの環境では不可）
+  - [x] Golden Strategy 2種の生成EA（`mql4/generated/*.mq4`）と `strategy_specs/*.json`
+  - 完了条件: StrategySpec → EA が生成される -- 達成済み（実機コンパイルはユーザー環境で確認要、docs/rakuten_mt4.md参照）
 
 - [ ] **Phase 3 — Backtest Engine**
   - [ ] `src/backtest/runner.py`（コスト・スリッページ・スワップ考慮）
@@ -51,4 +52,5 @@ Next step をコミットメッセージまたは本ファイルの更新で報�
 
 ## 現在のステータス
 
-Phase 1 実装中。詳細は各コミットメッセージおよび `docs/assumptions.md` を参照。
+Phase 1・Phase 2 完了。Phase 3（Backtest Engine）実装中。詳細は各コミットメッセージ
+および `docs/assumptions.md` を参照。

@@ -39,15 +39,27 @@ class IndicatorSpec(BaseModel):
 class EntryRule(BaseModel):
     """Long or short entry condition.
 
-    ``condition`` is a short human-readable / DSL description (e.g.
-    "EMA20 crosses above EMA50"). It is not an executable expression by
-    itself; ``src/backtest/runner.py`` and ``src/generators/mql4_generator.py``
-    interpret the strategy via the structured ``indicators`` list plus this
-    description, and Golden Master tests pin the resulting signal.
+    ``condition`` is a short human-readable description (e.g. "EMA20 crosses
+    above EMA50"), always present. When the source condition is a simple
+    crossover/crossunder between two resolvable terms, ``indicator_a`` /
+    ``operator`` / ``indicator_b`` are also populated with a structured,
+    machine-checkable form of the same condition: each of ``indicator_a`` /
+    ``indicator_b`` is either an indicator label matching an entry in
+    ``StrategySpec.indicators`` (e.g. "EMA20") or a numeric literal string
+    (e.g. "30"). Both ``src/backtest/runner.py`` and
+    ``src/generators/mql4_generator.py`` consume the structured fields when
+    present so that the Python reference implementation and the generated
+    MQL4 EA implement the *identical* trigger, rather than each re-parsing
+    ``condition`` independently. When the structured fields are absent
+    (hand-authored spec, or a condition too complex to structure), callers
+    fall back to treating the strategy as NEEDS_REVIEW for EA generation.
     """
 
     condition: str
     execution: ExecutionModel = "next_bar_market"
+    indicator_a: str | None = None
+    operator: Literal["crosses_above", "crosses_below"] | None = None
+    indicator_b: str | None = None
 
 
 class ExitRule(BaseModel):
