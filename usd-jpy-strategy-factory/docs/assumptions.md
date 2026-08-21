@@ -44,6 +44,25 @@
 11. **秒 / Symbol 拡張性:** `StrategySpec.symbol` はフィールドとして自由に保持できるが、
     `validator.py` は Phase 1 の間 `symbol == "USDJPY"` を強制する（§1 のスコープ限定を
     コードレベルでも保証するため）。
+12. **バックテストのコストパラメータ（spread/slippage/swap/commission）はプレースホルダ。**
+    `config/default.yaml` の `backtest.costs` および `src/backtest/costs.py::CostConfig` の
+    既定値は楽天MT4の実測値ではなく一般的なUSDJPYの実勢に基づく仮定値。実運用判断の前に
+    実測値へ差し替えること。
+13. **口座通貨はJPYと仮定する。** `CostConfig.pip_value_per_lot()` は
+    `pip_size * lot_units` をそのまま口座通貨（JPY）建ての1pipあたり価値として扱う
+    （USDJPYはJPY建て口座では実際にこの関係が成り立つ）。他通貨ペアへ拡張する際は
+    円換算レートの考慮が必要になる。
+14. **SL/TPが同一バー内で両方ヒットした場合、ストップロスが先に約定したとみなす**
+    （保守的なバイアス。`src/backtest/runner.py::check_stop_take` 参照）。実際の順序は
+    バー内の値動きパスに依存するため不確定であり、楽観的な結果を避けるための仮定。
+15. **エントリー価格モデル:** ロングは "next bar open + slippage"、ショートは
+    "next bar open - slippage" で約定するとし、スプレッドコストは往復分をまとめて
+    決済時にpips単位で差し引く簡略モデルを採用する（`src/backtest/runner.py::close_trade`）。
+    Bid/Ask個別のティックデータではなくOHLC四本値からの近似である。
+16. **ベンチマーク戦略（§16）の定義:** `always_long` / `always_short` は対象戦略と同じ
+    SL/TP・ロットサイズを使い「常時同方向にポジションを取り直す」ことでエントリータイミングの
+    寄与を分離する設計とした。`random_entry` は対象戦略とおおよそ同じ取引回数になるよう
+    エントリー確率を校正する。`buy_and_hold` はSL/TPなしで単一ポジションを保有し続ける。
 
 ## 既知の課題（KNOWN ISSUE）
 

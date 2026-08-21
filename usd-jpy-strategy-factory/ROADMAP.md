@@ -21,12 +21,15 @@ Next step をコミットメッセージまたは本ファイルの更新で報�
   - [x] Golden Strategy 2種の生成EA（`mql4/generated/*.mq4`）と `strategy_specs/*.json`
   - 完了条件: StrategySpec → EA が生成される -- 達成済み（実機コンパイルはユーザー環境で確認要、docs/rakuten_mt4.md参照）
 
-- [ ] **Phase 3 — Backtest Engine**
-  - [ ] `src/backtest/runner.py`（コスト・スリッページ・スワップ考慮）
-  - [ ] `src/backtest/metrics.py`
-  - [ ] Buy&Hold / Random Entry / Always Long / Always Short / Simple EMA Cross ベンチマーク
-  - [ ] `src/database/models.py` / `repository.py`
-  - 完了条件: サンプル OHLCV でバックテストを実行し結果を DB へ保存できる
+- [x] **Phase 3 — Backtest Engine**
+  - [x] `src/backtest/runner.py`（コスト・スリッページ・スワップ考慮、スプレッドStress Test）
+  - [x] `src/backtest/metrics.py`（§15 全指標）
+  - [x] Buy&Hold / Random Entry / Always Long / Always Short / Simple EMA Cross ベンチマーク
+  - [x] `src/database/models.py` / `repository.py`（SQLite, Repository Pattern）
+  - [x] pytest によるユニットテスト（indicators/runner/metrics/benchmarks/repository）
+  - 完了条件: サンプル OHLCV でバックテストを実行し結果を DB へ保存できる -- 達成済み
+    （実データは `docs/assumptions.md` の制約により合成データで検証。ユーザーは
+    実USDJPY CSVを `data/` に配置して同じ経路で実行可能）
 
 - [ ] **Phase 4 — Quant Validation**
   - [ ] In-Sample / Out-of-Sample split（config化）
@@ -52,5 +55,5 @@ Next step をコミットメッセージまたは本ファイルの更新で報�
 
 ## 現在のステータス
 
-Phase 1・Phase 2 完了。Phase 3（Backtest Engine）実装中。詳細は各コミットメッセージ
+Phase 1・Phase 2・Phase 3 完了。Phase 4（Quant Validation）実装中。詳細は各コミットメッセージ
 および `docs/assumptions.md` を参照。
