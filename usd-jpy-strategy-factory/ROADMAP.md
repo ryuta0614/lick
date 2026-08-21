@@ -41,14 +41,28 @@ Next step をコミットメッセージまたは本ファイルの更新で報�
   - 完了条件: 上記すべてが実行可能 -- 達成済み
   - 完了条件: 上記すべてが CLI から実行可能
 
-- [ ] **Phase 5 — Dashboard**
-  - [ ] `src/dashboard/` Streamlit アプリ（Dashboard / Strategy Detail / Comparison）
-  - 完了条件: 戦略の一覧・比較ができる
+- [x] **CLI — `app.py`（§31）**
+  - [x] `import` / `analyze` / `convert` / `compile` / `backtest` / `walkforward` / `montecarlo` /
+        `evaluate` / `rank` / `dashboard` / `pipeline`（一括実行）
+  - [x] `--synthetic` フラグ（このコンテナに実USDJPYデータが無いための実行可能なデモ経路。
+        `docs/assumptions.md` #2参照。実データは `--data <csv>` で指定）
+  - [x] 実行のたびに `RUN_MODE`/`ENABLE_LIVE_TRADING` のLive Safetyゲート状態を表示
+  - 完了条件: `python app.py pipeline pine_inputs/ema_cross.pine --synthetic` が
+    Import→Analyze→Convert→Compile→Backtest→WalkForward→MonteCarlo→Evaluateまで
+    通しで実行できる -- 達成済み
 
-- [ ] **Phase 6 — 楽天MT4 デモ運用**
-  - [ ] `src/mt4/compiler.py` / `terminal.py` / `connection_monitor.py`
-  - [ ] 土曜ログアウト対応フロー
-  - 完了条件: デモ口座で最低4週間のフォワードテスト（この開発コンテナでは実機接続不可 — I/F実装のみ）
+- [x] **Phase 5 — Dashboard**
+  - [x] `src/dashboard/` Streamlit アプリ（Dashboard / Strategy Detail / Comparison）
+  - [x] `src/dashboard/queries.py`（DB問い合わせをUIから分離しユニットテスト可能に）
+  - [x] `streamlit.testing.v1.AppTest` による3ページ全ての実行時検証（例外なし）
+  - 完了条件: 戦略の一覧・比較ができる -- 達成済み（ブラウザでの目視確認はこの開発コンテナでは
+    実施不可。`docs/assumptions.md` #3参照。AppTestによる実行時検証で代替）
+
+- [x] **Phase 6 — 楽天MT4 デモ運用（インターフェースのみ）**
+  - [x] `src/mt4/compiler.py` / `terminal.py` / `connection_monitor.py`
+  - [x] 土曜ログアウト対応フロー（`ConnectionMonitor` ステートマシン）
+  - 完了条件: デモ口座で最低4週間のフォワードテスト（この開発コンテナでは実機接続不可 — I/F実装のみ。
+    実機接続・実デモ運用はユーザーのWindows環境で実施）
 
 - [ ] **Phase 7 — LIVE 準備**
   - [ ] Backtest/OOS/WalkForward/MonteCarlo/MQL4 validation/Demo/Risk config の PASS 判定集約
@@ -57,5 +71,5 @@ Next step をコミットメッセージまたは本ファイルの更新で報�
 
 ## 現在のステータス
 
-Phase 1〜4 完了。Phase 5（Dashboard）実装中。詳細は各コミットメッセージ
+Phase 1〜6 完了（Phase 6は実機接続不可のためインターフェースのみ）。Phase 7（LIVE準備）は本番発注を有効化しない方針のため、このリポジトリでは意図的に未実装。詳細は各コミットメッセージ
 および `docs/assumptions.md` を参照。

@@ -67,6 +67,9 @@ def _max_drawdown(equity: pd.Series) -> tuple[float, float]:
     abs_dd = max(float(-drawdown.min()), 0.0) if len(drawdown) else 0.0
     rel_dd = drawdown / running_max.replace(0, np.nan) * 100.0
     rel_dd_pct = max(float(-rel_dd.min()), 0.0) if rel_dd.notna().any() else 0.0
+    # max(-0.0, 0.0) keeps -0.0 in Python (they compare equal); normalize it away.
+    abs_dd = 0.0 if abs_dd == 0 else abs_dd
+    rel_dd_pct = 0.0 if rel_dd_pct == 0 else rel_dd_pct
     return abs_dd, rel_dd_pct
 
 

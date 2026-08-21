@@ -4,6 +4,7 @@ logs/*
 data/private/
 data/*.db
 data/*.csv
+data/pine_registry.json
 .venv/
 __pycache__/
 *.pyc

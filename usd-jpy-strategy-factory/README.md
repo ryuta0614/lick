@@ -32,20 +32,25 @@ cp .env.example .env
 
 ## CLI
 
+このコンテナからは実USDJPYヒストリカルデータを取得できないため
+（`docs/assumptions.md` #2）、各バックテスト系コマンドは `--data <csv>`
+（実データ）または `--synthetic`（デモ用合成データ、結果は実バックテストとして
+扱わないこと）のいずれかを指定する。
+
 ```bash
-python app.py import pine_inputs/ema_cross.pine
+python app.py import pine_inputs/ema_cross.pine --strategy-id ema_cross_001
 python app.py analyze ema_cross_001
 python app.py convert ema_cross_001
 python app.py compile ema_cross_001
-python app.py backtest ema_cross_001
-python app.py walkforward ema_cross_001
-python app.py montecarlo ema_cross_001
-python app.py evaluate ema_cross_001
+python app.py backtest ema_cross_001 --data data/USDJPY_1h.csv
+python app.py walkforward ema_cross_001 --data data/USDJPY_1h.csv
+python app.py montecarlo ema_cross_001 --data data/USDJPY_1h.csv
+python app.py evaluate ema_cross_001 --data data/USDJPY_1h.csv
 python app.py rank
 python app.py dashboard
 
-# 一括実行
-python app.py pipeline pine_inputs/ema_cross.pine
+# 一括実行（実データがまだ無い場合は --synthetic でパイプライン全体を確認できる）
+python app.py pipeline pine_inputs/ema_cross.pine --strategy-id ema_cross_001 --synthetic
 ```
 
 ## テスト
