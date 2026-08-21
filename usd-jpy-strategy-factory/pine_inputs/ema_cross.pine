@@ -1,0 +1,32 @@
+//@version=5
+// @timeframe: 1h
+// Golden Strategy #1 -- EMA20/50 Crossover (trend following)
+// EMA20 crosses above EMA50 -> Long
+// EMA20 crosses below EMA50 -> Short
+// Opposite signal closes current position and reverses (strategy.entry replaces it).
+strategy("EMA20/50 Crossover", overlay=true, default_qty_type=strategy.fixed, default_qty_value=0.01)
+
+emaFastLen = input.int(20, title="EMA Fast Length")
+emaSlowLen = input.int(50, title="EMA Slow Length")
+slPips = input.float(20, title="Stop Loss (pips)")
+tpPips = input.float(40, title="Take Profit (pips)")
+
+emaFast = ta.ema(close, emaFastLen)
+emaSlow = ta.ema(close, emaSlowLen)
+
+longCondition = ta.crossover(emaFast, emaSlow)
+shortCondition = ta.crossunder(emaFast, emaSlow)
+
+pipSize = syminfo.mintick * 10
+
+if (longCondition)
+    strategy.entry("Long", strategy.long)
+
+if (shortCondition)
+    strategy.entry("Short", strategy.short)
+
+strategy.exit("Long Exit", "Long", stop=strategy.position_avg_price - slPips * pipSize, limit=strategy.position_avg_price + tpPips * pipSize)
+strategy.exit("Short Exit", "Short", stop=strategy.position_avg_price + slPips * pipSize, limit=strategy.position_avg_price - tpPips * pipSize)
+
+plot(emaFast, color=color.blue)
+plot(emaSlow, color=color.red)

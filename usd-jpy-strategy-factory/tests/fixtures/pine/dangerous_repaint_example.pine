@@ -1,0 +1,13 @@
+//@version=5
+// NOT a real strategy -- fixture for anti_repaint.py unit tests only.
+// Contains deliberately dangerous patterns: request.security with
+// lookahead_on, and a negative (future) bar offset.
+strategy("Repaint Example (DO NOT USE)", overlay=true)
+
+htfClose = request.security(syminfo.tickerid, "60", close, lookahead=barmerge.lookahead_on)
+futureClose = close[-1]
+
+longCondition = close > htfClose and futureClose > close
+
+if (longCondition)
+    strategy.entry("Long", strategy.long)

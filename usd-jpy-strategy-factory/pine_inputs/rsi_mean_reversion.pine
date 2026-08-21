@@ -1,0 +1,32 @@
+//@version=5
+// @timeframe: 15m
+// Golden Strategy #2 -- RSI Mean Reversion
+// RSI crosses above oversold level -> Long
+// RSI crosses below overbought level -> Short
+strategy("RSI Mean Reversion", overlay=false, default_qty_type=strategy.fixed, default_qty_value=0.01)
+
+rsiLen = input.int(14, title="RSI Length")
+rsiOversold = input.int(30, title="Oversold Level")
+rsiOverbought = input.int(70, title="Overbought Level")
+slPips = input.float(25, title="Stop Loss (pips)")
+tpPips = input.float(25, title="Take Profit (pips)")
+
+rsiValue = ta.rsi(close, rsiLen)
+
+longCondition = ta.crossover(rsiValue, rsiOversold)
+shortCondition = ta.crossunder(rsiValue, rsiOverbought)
+
+pipSize = syminfo.mintick * 10
+
+if (longCondition)
+    strategy.entry("Long", strategy.long)
+
+if (shortCondition)
+    strategy.entry("Short", strategy.short)
+
+strategy.exit("Long Exit", "Long", stop=strategy.position_avg_price - slPips * pipSize, limit=strategy.position_avg_price + tpPips * pipSize)
+strategy.exit("Short Exit", "Short", stop=strategy.position_avg_price + slPips * pipSize, limit=strategy.position_avg_price - tpPips * pipSize)
+
+plot(rsiValue)
+hline(rsiOversold)
+hline(rsiOverbought)

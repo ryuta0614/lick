@@ -1,0 +1,94 @@
+# USDJPY AI Strategy Factory -- default configuration
+# All values here are conservative placeholders (docs/assumptions.md #8, #9).
+# Override via environment-specific config files or environment variables;
+# never hardcode secrets here (see .env.example).
+
+scope:
+  broker: "rakuten_mt4"
+  symbol: "USDJPY"
+  asset: "FX"
+
+run_mode:
+  # BACKTEST | DEMO | LIVE. LIVE must never be set here by default.
+  default: "BACKTEST"
+  # Both must be true/LIVE simultaneously for any order to be sent (§10).
+  enable_live_trading_env_var: "ENABLE_LIVE_TRADING"
+
+risk_engine:
+  max_spread_pips: 3.0
+  max_positions: 1
+  max_lots: 0.10
+  max_daily_loss_pct: 2.0
+  max_drawdown_pct: 10.0
+  max_trades_per_day: 10
+  trading_start_hour: 0
+  trading_end_hour: 23
+  friday_close: true
+  friday_close_hour: 22
+  emergency_stop: false
+
+kill_switch:
+  stop_trading: false
+  # "close_all" | "hold" -- what to do with existing positions when STOP_TRADING=true
+  on_stop_existing_positions: "hold"
+
+backtest:
+  min_years: 10
+  timeframes: ["5m", "15m", "30m", "1h", "4h"]
+  costs:
+    spread_stress_multipliers: [1.0, 1.5, 2.0]
+    slippage_pips: 0.3
+    swap_enabled: true
+    commission_per_lot: 0.0
+  in_sample:
+    start: "2017-01-01"
+    end: "2022-12-31"
+  validation:
+    start: "2023-01-01"
+    end: "2024-12-31"
+  out_of_sample:
+    start: "2025-01-01"
+    end: "2026-12-31"
+
+walk_forward:
+  training_months: 24
+  test_months: 6
+  step_months: 6
+
+monte_carlo:
+  simulations: 10000
+  confidence_levels: [0.95, 0.99]
+
+robustness:
+  # relative neighborhood to sweep around each optimized numeric parameter
+  neighborhood_steps: [-2, -1, 0, 1, 2]
+
+scoring:
+  weights:
+    profit_factor: 15
+    max_drawdown: 20
+    sharpe: 10
+    out_of_sample: 20
+    walk_forward: 15
+    parameter_robustness: 10
+    trade_count: 5
+    monte_carlo: 5
+
+reject_thresholds:
+  min_profit_factor: 1.2
+  max_drawdown_pct: 30.0
+  min_trades: 100
+  min_oos_profit: 0.0
+  reject_on_repainting: true
+  reject_on_lookahead: true
+
+anti_repaint:
+  min_trades_for_safe: 100
+  overfitting_warning_params: 8
+  overfitting_dangerous_params: 12
+
+demo:
+  min_weeks_before_live_review: 4
+
+database:
+  url: "sqlite:///data/strategy_factory.db"
