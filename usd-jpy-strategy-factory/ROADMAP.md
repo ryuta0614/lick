@@ -31,12 +31,14 @@ Next step をコミットメッセージまたは本ファイルの更新で報�
     （実データは `docs/assumptions.md` の制約により合成データで検証。ユーザーは
     実USDJPY CSVを `data/` に配置して同じ経路で実行可能）
 
-- [ ] **Phase 4 — Quant Validation**
-  - [ ] In-Sample / Out-of-Sample split（config化）
-  - [ ] `src/backtest/walkforward.py`（WFE 算出）
-  - [ ] `src/backtest/montecarlo.py`（10,000 simulations）
-  - [ ] `src/backtest/robustness.py`（パラメータ近傍評価）
-  - [ ] `src/ranking/scorer.py`（Strategy Score, Reject 条件）
+- [x] **Phase 4 — Quant Validation**
+  - [x] In-Sample / Out-of-Sample split（`src/backtest/sample_split.py`、config化）
+  - [x] `src/backtest/walkforward.py`（WFE 算出。パラメータ再最適化なしの簡易版、docs/assumptions.md参照）
+  - [x] `src/backtest/montecarlo.py`（既定10,000 simulations、ベクトル化実装）
+  - [x] `src/backtest/robustness.py`（パラメータ近傍評価、Parameter Plateau判定）
+  - [x] `src/ranking/scorer.py`（Strategy Score §21, Reject 条件 §22）
+  - [x] pytest によるユニットテスト（sample_split/walkforward/montecarlo/robustness/scorer）
+  - 完了条件: 上記すべてが実行可能 -- 達成済み
   - 完了条件: 上記すべてが CLI から実行可能
 
 - [ ] **Phase 5 — Dashboard**
@@ -55,5 +57,5 @@ Next step をコミットメッセージまたは本ファイルの更新で報�
 
 ## 現在のステータス
 
-Phase 1・Phase 2・Phase 3 完了。Phase 4（Quant Validation）実装中。詳細は各コミットメッセージ
+Phase 1〜4 完了。Phase 5（Dashboard）実装中。詳細は各コミットメッセージ
 および `docs/assumptions.md` を参照。

@@ -63,6 +63,19 @@
     SL/TP・ロットサイズを使い「常時同方向にポジションを取り直す」ことでエントリータイミングの
     寄与を分離する設計とした。`random_entry` は対象戦略とおおよそ同じ取引回数になるよう
     エントリー確率を校正する。`buy_and_hold` はSL/TPなしで単一ポジションを保有し続ける。
+17. **Walk Forward Analysis はパラメータ再最適化を行わない簡易版とする。**
+    `src/backtest/walkforward.py` はウィンドウごとに固定パラメータのStrategySpecを
+    Training/Test両区間で実行し、性能の一貫性（劣化度合い）をWFE
+    （sum(Test Net Profit)/sum(Training Net Profit)）として測定する。パラメータ最適化
+    エンジンはこのリポジトリに未実装のため、古典的な「各ウィンドウで再最適化してから
+    Test区間を評価する」WFAとは異なる近似実装であることを明記する。
+18. **Parameter Robustness Test は1指標のみを対象にできる設計。**
+    `run_robustness_test` は `indicator_index` で指定した1つの指標のperiodを
+    近傍でスイープする。複数パラメータの同時摂動（グリッドサーチ）は将来拡張とする。
+19. **Strategy Score は生の利益額を評価軸に含めない。** §21/§42の方針に従い、
+    Profit Factor・Max Drawdown・Sharpe・Out of Sample・Walk Forward・Parameter
+    Robustness・Trade Count・Monte Carloの8項目のみで採点し、Net Profitの絶対額は
+    スコアに影響しない。
 
 ## 既知の課題（KNOWN ISSUE）
 
