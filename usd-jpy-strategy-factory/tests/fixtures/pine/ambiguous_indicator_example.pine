@@ -1,0 +1,9 @@
+//@version=5
+// Fixture: indicator() script with no strategy.entry calls at all --
+// entry/exit logic is not machine-derivable, must resolve to NEEDS_REVIEW.
+indicator("Custom Oscillator", overlay=false)
+
+len = input.int(14, title="Length")
+osc = ta.rsi(close, len)
+
+plot(osc)
