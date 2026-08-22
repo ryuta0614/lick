@@ -52,8 +52,9 @@ export default async function ContentDetailPage({ params }: { params: { id: stri
             </div>
           </div>
           {publishMode === "REAL" && (
-            <p className="mt-3 rounded-md bg-red-50 p-2 text-xs text-destructive">
-              Publishing/approving this post will post to a REAL Threads account. This is not reversible via this app.
+            <p className="mt-3 rounded-md bg-red-50 p-2 text-xs font-semibold text-destructive">
+              ⚠ REAL THREADS POST @{post.socialAccount.username ?? post.socialAccount.id} — publishing/approving this
+              post will post to a REAL Threads account. This is not reversible via this app.
             </p>
           )}
         </CardContent>
@@ -73,7 +74,12 @@ export default async function ContentDetailPage({ params }: { params: { id: stri
           <CardTitle>Actions</CardTitle>
         </CardHeader>
         <CardContent>
-          <PostActions postId={post.id} status={post.status} />
+          <PostActions
+            postId={post.id}
+            status={post.status}
+            isRealPublish={publishMode === "REAL"}
+            username={post.socialAccount.username ?? post.socialAccount.id}
+          />
         </CardContent>
       </Card>
 

@@ -1,8 +1,14 @@
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { prisma } from "@social-growth-os/database";
-import { computeContentHash, ContentValidationError } from "@social-growth-os/shared";
+import { calculatePostMetrics, computeContentHash, ContentValidationError } from "@social-growth-os/shared";
 import { IdeaGenerator, runContentTournament, type PersonaBrief } from "@social-growth-os/content-engine";
+import {
+  analyzeAccountPerformance,
+  buildGenerationContext,
+  extractPostFeatures,
+  type PublishedPostRecord,
+} from "@social-growth-os/analytics";
 import { getAIProvider } from "../ai-provider.js";
 import { recordAIExecution } from "../record-ai-execution.js";
 
@@ -19,6 +25,12 @@ export type GenerateContentJobData = z.infer<typeof GenerateContentJobSchema>;
  * Persists the winning candidate as a Post in REVIEW, all candidates as
  * PostVariant rows, and every critique as a PostScore row
  * (CLAUDE.md STEP 7 / sections 12-15).
+ *
+ * The Writer also receives a compressed generation context — Persona + Idea
+ * + current Strategy + Performance Learnings (CLAUDE.md Phase 2.5 STEP 13) —
+ * built live from this account's published-post performance. Never raw DB
+ * rows: only the Learning Engine's already-aggregated output crosses into
+ * the prompt (STEP 9/11).
  */
 export async function runGenerateContentJob(rawData: unknown): Promise<{ postId: string }> {
   const data = GenerateContentJobSchema.parse(rawData);
@@ -45,7 +57,7 @@ export async function runGenerateContentJob(rawData: unknown): Promise<{ postId:
     })
   ).map((i) => i.title);
 
-  const [recentWinnerPosts, recentLoserPosts] = await Promise.all([
+  const [recentWinnerPosts, recentLoserPosts, generationContext] = await Promise.all([
     prisma.post.findMany({
       where: { socialAccountId: data.socialAccountId, status: "PUBLISHED" },
       include: { scores: { orderBy: { createdAt: "desc" }, take: 1 } },
@@ -58,6 +70,7 @@ export async function runGenerateContentJob(rawData: unknown): Promise<{ postId:
       orderBy: { updatedAt: "desc" },
       take: 5,
     }),
+    buildAccountGenerationContext(data.workspaceId, data.socialAccountId),
   ]);
 
   const provider = getAIProvider();
@@ -99,6 +112,7 @@ export async function runGenerateContentJob(rawData: unknown): Promise<{ postId:
     traceId,
     recentWinners: recentWinnerPosts.map((p) => ({ text: p.text ?? "", qualityScore: p.scores[0]?.qualityScore })),
     recentLosers: recentLoserPosts.map((p) => ({ text: p.text ?? "", qualityScore: p.scores[0]?.qualityScore })),
+    generationContext,
   });
   await Promise.all(aiCalls.map((metadata) => recordAIExecution(metadata, { success: true })));
 
@@ -115,6 +129,7 @@ export async function runGenerateContentJob(rawData: unknown): Promise<{ postId:
       platform: socialAccount.platform,
       status: "REVIEW",
       text: winner.draft.text,
+      cta: winner.draft.cta,
       contentHash: computeContentHash(data.socialAccountId, winner.draft.text),
       generationPromptVersion: "post-writer@1",
     },
@@ -154,4 +169,53 @@ export async function runGenerateContentJob(rawData: unknown): Promise<{ postId:
   }
 
   return { postId: post.id };
+}
+
+/**
+ * Fetches this account's published posts + latest analytics snapshot,
+ * extracts features, runs the Learning Engine, and folds in the latest
+ * Strategy's observations if one exists. Never throws for "no data yet" —
+ * buildGenerationContext degrades gracefully (CLAUDE.md STEP 13/16).
+ */
+async function buildAccountGenerationContext(workspaceId: string, socialAccountId: string) {
+  const [publishedPosts, latestStrategy] = await Promise.all([
+    prisma.post.findMany({
+      where: { socialAccountId, status: "PUBLISHED" },
+      include: {
+        idea: { select: { topic: true, hookType: true, emotion: true, contentType: true } },
+        variants: { select: { selected: true, hookType: true } },
+        analytics: { orderBy: { capturedAt: "desc" }, take: 1 },
+      },
+    }),
+    prisma.strategy.findFirst({ where: { workspaceId }, orderBy: { createdAt: "desc" } }),
+  ]);
+
+  const records: PublishedPostRecord[] = publishedPosts.map((post) => {
+    const snapshot = post.analytics[0];
+    const features = extractPostFeatures({
+      id: post.id,
+      platform: post.platform,
+      text: post.text,
+      cta: post.cta,
+      publishedAt: post.publishedAt,
+      idea: post.idea,
+      variants: post.variants,
+    });
+    const metrics = calculatePostMetrics({
+      impressions: snapshot?.impressions,
+      likes: snapshot?.likes,
+      replies: snapshot?.replies,
+      shares: snapshot?.shares,
+      linkClicks: snapshot?.linkClicks,
+      followersGained: snapshot?.followersGained,
+    });
+    return { ...features, metrics };
+  });
+
+  const analysis = analyzeAccountPerformance(records);
+  const strategyObservations = Array.isArray(latestStrategy?.observations)
+    ? (latestStrategy.observations as unknown[]).filter((o): o is string => typeof o === "string")
+    : undefined;
+
+  return buildGenerationContext(analysis, { strategyObservations });
 }

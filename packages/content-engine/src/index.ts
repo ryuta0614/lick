@@ -6,4 +6,5 @@ export * from "./writer/post-writer.js";
 export * from "./critic/scoring.js";
 export * from "./critic/post-critic.js";
 export * from "./optimizer/tournament.js";
+export * from "./strategy/strategy-writer.js";
 export * from "./mock-generators.js";

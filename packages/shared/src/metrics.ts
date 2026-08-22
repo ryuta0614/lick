@@ -11,11 +11,13 @@ export type PostMetricsInput = {
   shares?: number | null;
   linkClicks?: number | null;
   followersGained?: number | null;
+  /** Sum of revenue attributed to this post. `null`/`undefined` means "not tracked", not "zero" (CLAUDE.md section 25). */
   revenue?: number | null;
 };
 
 export type PostMetricsResult = {
   engagementRate: number | null;
+  likeRate: number | null;
   shareRate: number | null;
   replyRate: number | null;
   followerConversionRate: number | null;
@@ -29,6 +31,7 @@ export function calculatePostMetrics(input: PostMetricsInput): PostMetricsResult
 
   return {
     engagementRate: safeRate(likes != null || replies != null || shares != null ? engagements : null, impressions),
+    likeRate: safeRate(likes, impressions),
     shareRate: safeRate(shares, impressions),
     replyRate: safeRate(replies, impressions),
     followerConversionRate: safeRate(followersGained, impressions),

@@ -91,6 +91,43 @@ export function createDefaultMockGenerators(): Record<string, MockStructuredGene
         qualityScore: 75,
       };
     },
+
+    generate_strategy: ({ prompt }) => {
+      const seed = hashString(prompt);
+      return {
+        recommendedMix: [
+          {
+            label: MOCK_MIX_LABELS[seed % MOCK_MIX_LABELS.length],
+            weight: 0.4,
+            rationale: "Reflects the winning patterns listed in the aggregated data above.",
+          },
+          {
+            label: MOCK_MIX_LABELS[(seed + 1) % MOCK_MIX_LABELS.length],
+            weight: 0.3,
+            rationale: "An adjacent variation on what has worked so far.",
+          },
+          {
+            label: "Exploratory / new angles",
+            weight: 0.3,
+            rationale: "Keeps exploring rather than only repeating proven patterns.",
+          },
+        ],
+        recommendedTimes: [
+          {
+            window: MOCK_TIME_WINDOWS[seed % MOCK_TIME_WINDOWS.length],
+            rationale: "Derived from the posting-hour aggregates in the data above.",
+          },
+        ],
+        experiments: [
+          {
+            hypothesis: "Shorter posts may perform better with this audience.",
+            variable: "postLength",
+            control: "current average length",
+            variant: "under 100 characters",
+          },
+        ],
+      };
+    },
   };
 }
 
@@ -126,3 +163,7 @@ const MOCK_CTA_LINES = [
   "Follow for more breakdowns like this.",
   "Curious what you'd add — drop a comment.",
 ];
+
+const MOCK_MIX_LABELS = ["Story-driven posts", "Practical how-to posts", "Contrarian takes", "Quick-win lists"];
+
+const MOCK_TIME_WINDOWS = ["08:00-09:59", "12:00-13:59", "20:00-21:59"];

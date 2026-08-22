@@ -138,6 +138,49 @@ post to Threads — see step 8 below.
    before you approve. `SEMI_AUTO`/`AUTO` accounts are never allowed to
    publish for real in this phase (CLAUDE.md STEP 15).
 
+### Manual real-Threads validation checklist (human only)
+
+**Claude Code must never execute any of the steps below itself.** Every
+automated test in this repo runs against `MockAIProvider`/`MockPlatformAdapter`
+or a mocked `fetch` — nothing in CI or in an AI coding session ever calls the
+real Threads API. This checklist is for a human to run by hand, once, against
+a real Threads developer account, to confirm the whole real-publish → real-
+analytics → learning loop actually works end to end (CLAUDE.md Phase 2.5).
+
+Real publishing additionally requires **all** of: `PLATFORM_MODE=real`,
+`THREADS_DRY_RUN=false`, the account's `approvalMode=MANUAL`, the post in
+`APPROVED` status, and an explicit **Publish now** click — see steps 1–8
+above. Before that final click, the Content detail page and the Publish
+button both show **"REAL THREADS POST @&lt;username&gt;"** in red — stop and
+double-check the account before proceeding.
+
+- [ ] **OAuth success** — `/settings/accounts` → Connect Threads completes
+      the Meta authorization redirect and lands back on
+      `/settings/accounts?connected=threads` without an error.
+- [ ] **Username fetched** — the connected account shows the real Threads
+      `@username` (not a placeholder) in `/settings/accounts` and on the
+      Content pages.
+- [ ] **Credential stored encrypted** — inspect the `PlatformCredential` row
+      in Postgres directly (`accessTokenEnc`) and confirm it is ciphertext,
+      not the raw token, and that the raw token never appears in server logs.
+- [ ] **Dry run** — with `THREADS_DRY_RUN=true`, Approve + Publish now on a
+      real-account post creates a Threads media container but stops before
+      `/threads_publish`; the post ends `PUBLISHED` here with an
+      `externalId` prefixed `dryrun_`, and nothing appears on Threads.
+- [ ] **Real text publish** — with `THREADS_DRY_RUN=false`, after seeing the
+      "REAL THREADS POST @username" warning, Publish now actually posts.
+- [ ] **externalId saved** — the `Post.externalId` recorded here matches the
+      real Threads post ID (not a `dryrun_`/mock id).
+- [ ] **Post actually exists on Threads** — open the real Threads profile in
+      a browser and confirm the post is visible there.
+- [ ] **Analytics fetched** — after the scheduled analytics-collection delays
+      (see `apps/worker/src/jobs/collect-post-analytics.ts`), the job pulls
+      real insights from the Threads API without error.
+- [ ] **Snapshot saved** — a new `PostAnalyticsSnapshot` row appears for the
+      post, with metrics Threads doesn't provide left `NULL` (never `0`).
+- [ ] **Dashboard reflects it** — `/dashboard`, `/analytics`, and `/content/[id]`
+      all show the real post's numbers after the snapshot lands.
+
 ## Quality checks
 
 ```bash
@@ -159,3 +202,7 @@ are used throughout.
 - **Adapter resolution** (`apps/worker/src/platform-adapters.ts`): `getPlatformAdapter(account)` returns `MockPlatformAdapter` for X/Instagram always, and for Threads unless `PLATFORM_MODE`/`THREADS_PLATFORM_MODE=real` **and** the account has a valid, non-expired credential **and** `approvalMode=MANUAL` — otherwise it throws rather than silently falling back to mock.
 - **Error taxonomy & retries** (`packages/shared/src/errors.ts`): `PlatformAuthError`/`PlatformValidationError` are non-retryable; `PlatformRateLimitError`/`PlatformServerError` are retryable (`isRetryableError`). `apps/worker` throws BullMQ's `UnrecoverableError` for non-retryable failures so they don't waste retry attempts.
 - **Publish safety** (`apps/worker/src/jobs/publish-post.ts`): beyond the `(socialAccountId, contentHash)` unique constraint, a worker crash between a successful Threads publish call and the DB write is handled explicitly — resuming from `PUBLISHING` with an `externalId` already recorded finishes the transition without a new API call; resuming with no `externalId` is treated as ambiguous and fails loudly (no invented idempotency key) rather than risking a duplicate live post.
+- **Learning Engine** (`packages/analytics/src/learning/`): `extractPostFeatures()` derives platform/topic/hookType/emotion/contentType/CTA/textLength/lengthBucket/weekday/postingHour from each published `Post` (mostly computed on the fly, not stored — only `Post.cta` was added as a genuinely new column). `analyzeAccountPerformance()` groups by dimension, compares each bucket's median against the account-wide median (`relativeLift`), and tags every bucket with a confidence tier (`INSUFFICIENT_DATA` &lt;5, `LOW` 5-9, `MEDIUM` 10-29, `HIGH` 30+, all configurable). Below 5 measured posts the whole analysis is flagged `coldStart` and the system explicitly reports "not enough data" rather than inventing a pattern.
+- **Generation feedback loop** (`apps/worker/src/jobs/generate-content.ts` → `buildGenerationContext()`): the Writer receives a short list of plain-English `recentLearnings` (never raw DB rows, never "you must" phrasing — reference info only) plus a `mode` (`proven`/`adjacent`/`exploration`) sampled from a configurable mix, default 70/20/10, that widens toward exploration automatically when there's no `MEDIUM+` confidence pattern yet and goes to 100% exploration on cold start — the account never converges to only ever repeating past winners.
+- **Weekly Strategy** (`apps/worker/src/jobs/weekly-strategy-review.ts`): `winningTopics`/`losingTopics`/`winningHooks`/`losingHooks`/`winningFormats`/`observations` are computed **deterministically** from the Learning Engine's output (guaranteeing sample-size-citing phrasing like *"'story' hooks has outperformed the account median engagement rate by 31% over 16 posts"* by construction). Only `recommendedMix`/`recommendedTimes`/`experiments` go through an AI call (`StrategyWriter`), fed exclusively aggregated `{dimension, value, sampleSize, relativeLift, confidence}` rows — never raw post text. On cold start the AI call is skipped entirely and a minimal `observations: ["Not enough performance data yet."]` row is written instead.
+- **Revenue: null vs. zero** (`packages/analytics/src/attribution/revenue.ts`): `aggregateRevenue()` returns `null` — not `0` — when there isn't a single `Conversion` with a recorded `value` (no conversions yet, or only non-monetary ones like leads/clicks). The dashboard and per-post metrics render that as "Not enough data", never as ¥0, so an unmeasured account is never mistaken for a genuinely zero-revenue one.

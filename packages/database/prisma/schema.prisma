@@ -219,6 +219,10 @@ model Post {
   platform                Platform
   status                  PostStatus @default(DRAFT)
   text                    String?
+  // Winning variant's CTA (from PostWriter/PostDraft.cta) — the only field the
+  // learning engine needs that wasn't already on Post/ContentIdea/PostVariant
+  // (CLAUDE.md Phase 2.5 STEP 3: minimal schema change).
+  cta                     String?
   contentHash             String
   scheduledAt             DateTime?
   publishedAt             DateTime?

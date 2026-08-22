@@ -13,6 +13,7 @@ describe("calculatePostMetrics", () => {
       revenue: 100,
     });
     expect(result.engagementRate).toBeCloseTo(0.08);
+    expect(result.likeRate).toBeCloseTo(0.05);
     expect(result.shareRate).toBeCloseTo(0.02);
     expect(result.replyRate).toBeCloseTo(0.01);
     expect(result.clickRate).toBeCloseTo(0.015);
@@ -29,5 +30,15 @@ describe("calculatePostMetrics", () => {
   it("returns null when impressions are unknown (not just zero)", () => {
     const result = calculatePostMetrics({ likes: 5 });
     expect(result.engagementRate).toBeNull();
+  });
+
+  it("leaves a metric null when its own input is unmeasured, even with impressions present (not coerced to 0)", () => {
+    const result = calculatePostMetrics({ impressions: 1000, likes: 50 });
+    expect(result.likeRate).toBeCloseTo(0.05);
+    expect(result.shareRate).toBeNull();
+    expect(result.replyRate).toBeNull();
+    expect(result.clickRate).toBeNull();
+    expect(result.followerConversionRate).toBeNull();
+    expect(result.revenuePer1kImpressions).toBeNull();
   });
 });

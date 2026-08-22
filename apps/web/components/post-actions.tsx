@@ -17,7 +17,18 @@ async function callAction(postId: string, action: string, body?: unknown): Promi
   }
 }
 
-export function PostActions({ postId, status }: { postId: string; status: PostStatus }) {
+export function PostActions({
+  postId,
+  status,
+  isRealPublish,
+  username,
+}: {
+  postId: string;
+  status: PostStatus;
+  /** True when this post targets a real, connected Threads account with dry-run off (CLAUDE.md Phase 2.5 STEP 2). */
+  isRealPublish?: boolean;
+  username?: string;
+}) {
   const router = useRouter();
   const [pending, setPending] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -38,6 +49,12 @@ export function PostActions({ postId, status }: { postId: string; status: PostSt
 
   return (
     <div className="space-y-3">
+      {status === "APPROVED" && isRealPublish && (
+        <p className="rounded-md border border-destructive bg-red-50 p-2 text-sm font-bold text-destructive">
+          ⚠ REAL THREADS POST @{username} — this will publish to the real Threads account, right now.
+        </p>
+      )}
+
       <div className="flex flex-wrap gap-2">
         {status === "REVIEW" && (
           <>

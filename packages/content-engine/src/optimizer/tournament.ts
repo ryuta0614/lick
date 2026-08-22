@@ -4,7 +4,7 @@ import type { Platform } from "@social-growth-os/shared";
 import type { PersonaBrief } from "../ideas/idea-generator.js";
 import { HookGenerator } from "../writer/hook-generator.js";
 import { PostWriter } from "../writer/post-writer.js";
-import type { HistoricalPost } from "../writer/post-writer.js";
+import type { HistoricalPost, WriterGenerationContext } from "../writer/post-writer.js";
 import { PostCritic } from "../critic/post-critic.js";
 import type { CriticDecision, CriticWeights } from "../critic/scoring.js";
 
@@ -28,6 +28,7 @@ export type RunTournamentInput = {
   traceId: string;
   recentWinners?: HistoricalPost[];
   recentLosers?: HistoricalPost[];
+  generationContext?: WriterGenerationContext;
   config?: Partial<TournamentConfig>;
   criticWeights?: CriticWeights;
   model?: string;
@@ -84,6 +85,7 @@ export async function runContentTournament(
       persona: input.persona,
       recentWinners: input.recentWinners,
       recentLosers: input.recentLosers,
+      generationContext: input.generationContext,
       traceId: input.traceId,
       model: input.model,
     });

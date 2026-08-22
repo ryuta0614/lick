@@ -1,5 +1,6 @@
 import { prisma } from "../../lib/db";
 import { getDefaultWorkspace } from "../../lib/workspace";
+import { aggregateRevenue, revenuePer1kImpressions } from "@social-growth-os/analytics";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 
 export const dynamic = "force-dynamic";
@@ -10,7 +11,8 @@ type WindowStats = {
   engagement: number;
   clicks: number;
   conversions: number;
-  revenue: number;
+  /** null = unmeasurable (no conversion has a recorded value yet) — never conflated with a real ¥0 (CLAUDE.md Phase 2.5 STEP 17). */
+  revenue: number | null;
 };
 
 async function getStatsForWindow(workspaceId: string, days: number): Promise<WindowStats> {
@@ -24,7 +26,7 @@ async function getStatsForWindow(workspaceId: string, days: number): Promise<Win
     where: { post: { workspaceId }, occurredAt: { gte: since } },
   });
 
-  const stats = snapshots.reduce<WindowStats>(
+  const stats = snapshots.reduce(
     (acc, s) => {
       acc.impressions += s.impressions ?? 0;
       acc.followersGained += s.followersGained ?? 0;
@@ -32,16 +34,18 @@ async function getStatsForWindow(workspaceId: string, days: number): Promise<Win
       acc.clicks += s.linkClicks ?? 0;
       return acc;
     },
-    { impressions: 0, followersGained: 0, engagement: 0, clicks: 0, conversions: 0, revenue: 0 },
+    { impressions: 0, followersGained: 0, engagement: 0, clicks: 0 },
   );
 
-  stats.conversions = conversions.length;
-  stats.revenue = conversions.reduce((sum, c) => sum + Number(c.value ?? 0), 0);
-
-  return stats;
+  return {
+    ...stats,
+    conversions: conversions.length,
+    revenue: aggregateRevenue(conversions.map((c) => ({ value: c.value != null ? Number(c.value) : null }))),
+  };
 }
 
-function formatCurrency(value: number): string {
+function formatCurrency(value: number | null): string {
+  if (value == null) return "Not enough data";
   return `¥${Math.round(value).toLocaleString("ja-JP")}`;
 }
 
@@ -53,7 +57,7 @@ export default async function DashboardPage() {
     getStatsForWindow(workspace.id, 90),
   ]);
 
-  const revenuePer1k = d7.impressions > 0 ? (d7.revenue / d7.impressions) * 1000 : 0;
+  const revenuePer1k = revenuePer1kImpressions(d7.revenue, d7.impressions);
 
   return (
     <div className="space-y-8">

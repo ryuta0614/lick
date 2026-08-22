@@ -5,6 +5,17 @@ import type { PersonaBrief } from "../ideas/idea-generator.js";
 
 export type HistoricalPost = { text: string; qualityScore?: number };
 
+/**
+ * Compressed, plain-English performance context from the Learning Engine
+ * (packages/analytics/src/learning) — never raw DB rows. `mode` nudges the
+ * creative direction; `recentLearnings` are reference info, not commands
+ * (CLAUDE.md Phase 2.5 STEP 9).
+ */
+export type WriterGenerationContext = {
+  recentLearnings: string[];
+  mode: "proven" | "adjacent" | "exploration";
+};
+
 export type WritePostInput = {
   idea: ContentIdeaCandidate;
   hook: HookCandidate;
@@ -12,6 +23,7 @@ export type WritePostInput = {
   persona: PersonaBrief;
   recentWinners?: HistoricalPost[];
   recentLosers?: HistoricalPost[];
+  generationContext?: WriterGenerationContext;
   traceId: string;
   model?: string;
 };
@@ -44,9 +56,16 @@ export class PostWriter {
   }
 }
 
+const MODE_GUIDANCE: Record<WriterGenerationContext["mode"], string> = {
+  proven: "Today, lean into what has been working for this account.",
+  adjacent: "Today, try a variation adjacent to what has worked — same general direction, a fresh angle.",
+  exploration: "Today, deliberately explore a genuinely different angle. Don't just repeat winning patterns.",
+};
+
 function buildWriterPrompt(input: WritePostInput): string {
   const winners = input.recentWinners?.map((p) => `- "${p.text}"`).join("\n");
   const losers = input.recentLosers?.map((p) => `- "${p.text}"`).join("\n");
+  const learnings = input.generationContext?.recentLearnings;
 
   return [
     `Platform: ${input.platform}. ${PLATFORM_GUIDANCE[input.platform]}`,
@@ -56,6 +75,10 @@ function buildWriterPrompt(input: WritePostInput): string {
     `Use this hook as the opening line (you may lightly adapt it): "${input.hook.text}" (hookType: ${input.hook.hookType}).`,
     winners ? `Historical winners on this account (lean into what worked):\n${winners}` : undefined,
     losers ? `Historical losers on this account (avoid repeating these mistakes):\n${losers}` : undefined,
+    learnings?.length
+      ? `For reference only — not strict rules, use your judgement — recent performance learnings for this account:\n${learnings.map((l) => `- ${l}`).join("\n")}`
+      : undefined,
+    input.generationContext ? MODE_GUIDANCE[input.generationContext.mode] : undefined,
     "Write ONE original, complete post. Do not copy any real post; only reuse abstract patterns.",
     "Do not fabricate statistics, testimonials, or personal experience as fact.",
     'Return JSON: { "text", "hookType", "cta" }',
