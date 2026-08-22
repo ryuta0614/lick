@@ -84,10 +84,6 @@ describe("runWeeklyStrategyReviewJob (real DB, mock AI provider)", () => {
     await createPublishedPost({ hookType: "story", topic: "topic a", impressions: 100, likes: 5, publishedAt: new Date() });
     await createPublishedPost({ hookType: "story", topic: "topic a", impressions: 100, likes: 5, publishedAt: new Date() });
 
-    // AIExecution rows aren't workspace-scoped, so compare a before/after
-    // delta rather than an absolute count (robust to rows left by other tests).
-    const executionsBefore = await prisma.aIExecution.count({ where: { operation: "generate_strategy" } });
-
     const result = await runWeeklyStrategyReviewJob({ workspaceId });
     const strategy = await prisma.strategy.findUniqueOrThrow({ where: { id: result.strategyId } });
 
@@ -96,8 +92,8 @@ describe("runWeeklyStrategyReviewJob (real DB, mock AI provider)", () => {
     expect(strategy.winningHooks).toBeNull();
     expect(strategy.recommendedMix).toBeNull();
 
-    const executionsAfter = await prisma.aIExecution.count({ where: { operation: "generate_strategy" } });
-    expect(executionsAfter - executionsBefore).toBe(0);
+    const executions = await prisma.aIExecution.findMany({ where: { workspaceId, operation: "generate_strategy" } });
+    expect(executions).toHaveLength(0);
   });
 
   it("derives evidence-based, sample-size-citing observations and AI-generated recommendations once there is enough data", async () => {
@@ -126,8 +122,6 @@ describe("runWeeklyStrategyReviewJob (real DB, mock AI provider)", () => {
       });
     }
 
-    const executionsBefore = await prisma.aIExecution.count({ where: { operation: "generate_strategy" } });
-
     const result = await runWeeklyStrategyReviewJob({ workspaceId });
     const strategy = await prisma.strategy.findUniqueOrThrow({ where: { id: result.strategyId } });
 
@@ -144,7 +138,7 @@ describe("runWeeklyStrategyReviewJob (real DB, mock AI provider)", () => {
     expect(strategy.recommendedTimes).not.toBeNull();
     expect(strategy.experiments).not.toBeNull();
 
-    const executionsAfter = await prisma.aIExecution.count({ where: { operation: "generate_strategy" } });
-    expect(executionsAfter - executionsBefore).toBe(1);
+    const executions = await prisma.aIExecution.findMany({ where: { workspaceId, operation: "generate_strategy" } });
+    expect(executions).toHaveLength(1);
   });
 });

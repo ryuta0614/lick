@@ -133,7 +133,7 @@ export async function runWeeklyStrategyReviewJob(rawData: unknown): Promise<{ st
     losingPatterns: periodAnalysis.losingPatterns.map(toPatternSummary),
     traceId,
   });
-  await recordAIExecution(metadata, { success: true });
+  await recordAIExecution(data.workspaceId, metadata, { success: true });
 
   const strategy = await prisma.strategy.create({
     data: {

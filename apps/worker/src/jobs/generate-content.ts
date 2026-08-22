@@ -82,7 +82,7 @@ export async function runGenerateContentJob(rawData: unknown): Promise<{ postId:
     traceId,
     existingTitles,
   });
-  await recordAIExecution(ideaMetadata, { success: true });
+  await recordAIExecution(data.workspaceId, ideaMetadata, { success: true });
 
   const bestIdea = ideas[0];
   if (!bestIdea) {
@@ -114,7 +114,7 @@ export async function runGenerateContentJob(rawData: unknown): Promise<{ postId:
     recentLosers: recentLoserPosts.map((p) => ({ text: p.text ?? "", qualityScore: p.scores[0]?.qualityScore })),
     generationContext,
   });
-  await Promise.all(aiCalls.map((metadata) => recordAIExecution(metadata, { success: true })));
+  await Promise.all(aiCalls.map((metadata) => recordAIExecution(data.workspaceId, metadata, { success: true })));
 
   const winner = winners[0];
   if (!winner) {
