@@ -40,6 +40,7 @@ describe("runWeeklyStrategyReviewJob (real DB, mock AI provider)", () => {
     impressions: number;
     likes: number;
     publishedAt: Date;
+    socialAccountId?: string;
   }) {
     const idea = await prisma.contentIdea.create({
       data: {
@@ -55,7 +56,7 @@ describe("runWeeklyStrategyReviewJob (real DB, mock AI provider)", () => {
     const post = await prisma.post.create({
       data: {
         workspaceId,
-        socialAccountId,
+        socialAccountId: opts.socialAccountId ?? socialAccountId,
         ideaId: idea.id,
         platform: "THREADS",
         status: "PUBLISHED",
@@ -140,5 +141,54 @@ describe("runWeeklyStrategyReviewJob (real DB, mock AI provider)", () => {
 
     const executions = await prisma.aIExecution.findMany({ where: { workspaceId, operation: "generate_strategy" } });
     expect(executions).toHaveLength(1);
+  });
+
+  it("scopes the review to one account when socialAccountId is given, and keeps a workspace-wide review separate", async () => {
+    const secondAccount = await prisma.socialAccount.create({
+      data: {
+        workspaceId,
+        platform: "THREADS",
+        externalId: `threads_user_${randomUUID()}`,
+        username: "strategy_test_user_2",
+        approvalMode: "MANUAL",
+        active: true,
+      },
+    });
+
+    // Account A: 6 posts (past cold start). Account B: only 2 posts (cold start).
+    for (let i = 0; i < 6; i++) {
+      await createPublishedPost({ hookType: "story", topic: "topic a", impressions: 100, likes: 10, publishedAt: new Date() });
+    }
+    await createPublishedPost({
+      hookType: "story",
+      topic: "topic b",
+      impressions: 100,
+      likes: 10,
+      publishedAt: new Date(),
+      socialAccountId: secondAccount.id,
+    });
+    await createPublishedPost({
+      hookType: "story",
+      topic: "topic b",
+      impressions: 100,
+      likes: 10,
+      publishedAt: new Date(),
+      socialAccountId: secondAccount.id,
+    });
+
+    const accountAResult = await runWeeklyStrategyReviewJob({ workspaceId, socialAccountId });
+    const accountAStrategy = await prisma.strategy.findUniqueOrThrow({ where: { id: accountAResult.strategyId } });
+    expect(accountAStrategy.socialAccountId).toBe(socialAccountId);
+    expect(accountAStrategy.observations).not.toEqual(["Not enough performance data yet."]);
+
+    const accountBResult = await runWeeklyStrategyReviewJob({ workspaceId, socialAccountId: secondAccount.id });
+    const accountBStrategy = await prisma.strategy.findUniqueOrThrow({ where: { id: accountBResult.strategyId } });
+    expect(accountBStrategy.socialAccountId).toBe(secondAccount.id);
+    expect(accountBStrategy.observations).toEqual(["Not enough performance data yet."]);
+
+    // A workspace-wide review (no socialAccountId) pools both accounts' 8 posts together.
+    const workspaceWideResult = await runWeeklyStrategyReviewJob({ workspaceId });
+    const workspaceWideStrategy = await prisma.strategy.findUniqueOrThrow({ where: { id: workspaceWideResult.strategyId } });
+    expect(workspaceWideStrategy.socialAccountId).toBeNull();
   });
 });

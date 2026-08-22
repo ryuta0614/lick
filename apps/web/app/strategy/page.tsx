@@ -1,8 +1,10 @@
+import Link from "next/link";
 import { prisma } from "../../lib/db";
 import { getDefaultWorkspace } from "../../lib/workspace";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 import { Badge } from "../../components/ui/badge";
 import { RunStrategyReviewButton } from "../../components/run-strategy-review-button";
+import { AccountFilterBar } from "../../components/account-filter-bar";
 
 export const dynamic = "force-dynamic";
 
@@ -12,10 +14,19 @@ type RecommendedMixEntry = { label: string; weight: number; rationale: string };
 type RecommendedTimeEntry = { window: string; rationale: string };
 type ExperimentEntry = { hypothesis: string; variable: string; control: string; variant: string };
 
-export default async function StrategyPage() {
+export default async function StrategyPage({ searchParams }: { searchParams: { accountId?: string } }) {
   const workspace = await getDefaultWorkspace();
-  const strategy = await prisma.strategy.findFirst({
+  const accounts = await prisma.socialAccount.findMany({
     where: { workspaceId: workspace.id },
+    orderBy: { createdAt: "asc" },
+  });
+  const accountId = accounts.some((a) => a.id === searchParams.accountId) ? searchParams.accountId : undefined;
+
+  // "All accounts" shows workspace-wide reviews (socialAccountId: null) — not just
+  // whichever account's review happens to be newest — so the shown data always
+  // matches the selected scope.
+  const strategy = await prisma.strategy.findFirst({
+    where: { workspaceId: workspace.id, socialAccountId: accountId ?? null },
     orderBy: { createdAt: "desc" },
   });
 
@@ -38,8 +49,10 @@ export default async function StrategyPage() {
           <h1 className="text-2xl font-semibold">Strategy</h1>
           <p className="text-sm text-muted-foreground">Weekly AI review of what is and isn&apos;t working.</p>
         </div>
-        <RunStrategyReviewButton />
+        <RunStrategyReviewButton socialAccountId={accountId} />
       </div>
+
+      <AccountFilterBar accounts={accounts} basePath="/strategy" selectedAccountId={accountId} />
 
       {!strategy ? (
         <p className="text-sm text-muted-foreground">

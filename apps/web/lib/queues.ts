@@ -40,6 +40,10 @@ export async function enqueueCollectTrends(data: {
   await getTrendCollectionQueue().add(JOB_NAMES.collectTrends, data, DEFAULT_JOB_OPTIONS);
 }
 
-export async function enqueueWeeklyStrategyReview(data: { workspaceId: string; periodDays?: number }): Promise<void> {
+export async function enqueueWeeklyStrategyReview(data: {
+  workspaceId: string;
+  socialAccountId?: string;
+  periodDays?: number;
+}): Promise<void> {
   await getStrategyAnalysisQueue().add(JOB_NAMES.weeklyStrategyReview, data, DEFAULT_JOB_OPTIONS);
 }

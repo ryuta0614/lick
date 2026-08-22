@@ -99,6 +99,7 @@ model SocialAccount {
   workspace  Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   credential PlatformCredential?
   posts      Post[]
+  strategies Strategy[]
 
   @@unique([platform, externalId])
   @@index([workspaceId, platform])
@@ -119,20 +120,20 @@ model PlatformCredential {
 }
 
 model BrandPersona {
-  id          String   @id @default(cuid())
-  workspaceId String
-  name        String
-  niche       String
-  audience    String
-  tone        Json
-  expertise   Json?
-  beliefs     Json?
-  avoid       Json?
-  ctaStyle    String?
-  products    Json?
+  id           String   @id @default(cuid())
+  workspaceId  String
+  name         String
+  niche        String
+  audience     String
+  tone         Json
+  expertise    Json?
+  beliefs      Json?
+  avoid        Json?
+  ctaStyle     String?
+  products     Json?
   landingPages Json?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
@@ -312,6 +313,10 @@ model PostAnalyticsSnapshot {
 model Strategy {
   id               String   @id @default(cuid())
   workspaceId      String
+  // Null = workspace-wide review pooling every account. Set when a review is
+  // scoped to one account, so a workspace with several platforms/accounts
+  // (Phase 3 X/Instagram) doesn't blend their performance together.
+  socialAccountId  String?
   periodStart      DateTime
   periodEnd        DateTime
   winningTopics    Json?
@@ -326,9 +331,11 @@ model Strategy {
   confidence       Float?
   createdAt        DateTime @default(now())
 
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspace     Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  socialAccount SocialAccount? @relation(fields: [socialAccountId], references: [id], onDelete: Cascade)
 
   @@index([workspaceId, createdAt])
+  @@index([socialAccountId, createdAt])
 }
 
 model Experiment {

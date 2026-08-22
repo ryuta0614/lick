@@ -10,6 +10,7 @@ import {
 } from "@social-growth-os/analytics";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 import { Badge, type BadgeTone } from "../../components/ui/badge";
+import { AccountFilterBar } from "../../components/account-filter-bar";
 
 export const dynamic = "force-dynamic";
 
@@ -20,11 +21,20 @@ const TOP_SECTIONS: { dimension: LearningDimension; title: string; describeValue
   { dimension: "contentType", title: "Top Content Types" },
 ];
 
-export default async function AnalyticsPage() {
+export default async function AnalyticsPage({ searchParams }: { searchParams: { accountId?: string } }) {
   const workspace = await getDefaultWorkspace();
+  const accounts = await prisma.socialAccount.findMany({
+    where: { workspaceId: workspace.id },
+    orderBy: { createdAt: "asc" },
+  });
+  const accountId = accounts.some((a) => a.id === searchParams.accountId) ? searchParams.accountId : undefined;
 
   const posts = await prisma.post.findMany({
-    where: { workspaceId: workspace.id, status: "PUBLISHED" },
+    where: {
+      workspaceId: workspace.id,
+      ...(accountId ? { socialAccountId: accountId } : {}),
+      status: "PUBLISHED",
+    },
     include: {
       idea: { select: { topic: true, hookType: true, emotion: true, contentType: true } },
       variants: { select: { selected: true, hookType: true } },
@@ -61,9 +71,11 @@ export default async function AnalyticsPage() {
       <div>
         <h1 className="text-2xl font-semibold">Analytics</h1>
         <p className="text-sm text-muted-foreground">
-          Engagement rate by dimension, compared against this account&apos;s own baseline.
+          Engagement rate by dimension, compared against the selected scope&apos;s own baseline.
         </p>
       </div>
+
+      <AccountFilterBar accounts={accounts} basePath="/analytics" selectedAccountId={accountId} />
 
       {analysis.coldStart ? (
         <Card>

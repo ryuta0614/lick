@@ -18,6 +18,8 @@ import { recordAIExecution } from "../record-ai-execution.js";
 
 export const WeeklyStrategyReviewJobSchema = z.object({
   workspaceId: z.string(),
+  /** Scopes the review to one account. Omitted = workspace-wide, pooling every account (CLAUDE.md Phase 2.6). */
+  socialAccountId: z.string().optional(),
   periodDays: z.number().int().positive().default(30),
 });
 export type WeeklyStrategyReviewJobData = z.infer<typeof WeeklyStrategyReviewJobSchema>;
@@ -51,6 +53,7 @@ export async function runWeeklyStrategyReviewJob(rawData: unknown): Promise<{ st
   const posts = await prisma.post.findMany({
     where: {
       workspaceId: data.workspaceId,
+      ...(data.socialAccountId ? { socialAccountId: data.socialAccountId } : {}),
       status: "PUBLISHED",
       publishedAt: { gte: periodStart, lte: periodEnd },
     },
@@ -95,6 +98,7 @@ export async function runWeeklyStrategyReviewJob(rawData: unknown): Promise<{ st
     const strategy = await prisma.strategy.create({
       data: {
         workspaceId: data.workspaceId,
+        socialAccountId: data.socialAccountId,
         periodStart,
         periodEnd,
         observations: [NOT_ENOUGH_DATA_OBSERVATION],
@@ -138,6 +142,7 @@ export async function runWeeklyStrategyReviewJob(rawData: unknown): Promise<{ st
   const strategy = await prisma.strategy.create({
     data: {
       workspaceId: data.workspaceId,
+      socialAccountId: data.socialAccountId,
       periodStart,
       periodEnd,
       winningTopics,
