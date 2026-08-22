@@ -5,6 +5,7 @@ const nextConfig = {
     "@social-growth-os/analytics",
     "@social-growth-os/content-engine",
     "@social-growth-os/database",
+    "@social-growth-os/platform-connectors",
     "@social-growth-os/shared",
     "@social-growth-os/worker",
   ],

@@ -4,6 +4,8 @@ import { getDefaultWorkspace } from "../../lib/workspace";
 import { GeneratePostForm } from "../../components/generate-post-form";
 import { Badge, type BadgeTone } from "../../components/ui/badge";
 import { Card, CardContent } from "../../components/ui/card";
+import { PublishModeBadge } from "../../components/publish-mode-badge";
+import { resolvePublishMode } from "../../lib/publish-mode";
 import type { PostStatus } from "@social-growth-os/shared";
 
 export const dynamic = "force-dynamic";
@@ -26,11 +28,21 @@ export default async function ContentPage({ searchParams }: { searchParams: { st
   const workspace = await getDefaultWorkspace();
   const activeStatus = (TABS.includes(searchParams.status as PostStatus) ? searchParams.status : "REVIEW") as PostStatus;
 
-  const posts = await prisma.post.findMany({
-    where: { workspaceId: workspace.id, status: activeStatus },
-    include: { scores: { orderBy: { createdAt: "desc" }, take: 1 } },
-    orderBy: { updatedAt: "desc" },
-  });
+  const [posts, accounts] = await Promise.all([
+    prisma.post.findMany({
+      where: { workspaceId: workspace.id, status: activeStatus },
+      include: {
+        scores: { orderBy: { createdAt: "desc" }, take: 1 },
+        socialAccount: { include: { credential: true } },
+      },
+      orderBy: { updatedAt: "desc" },
+    }),
+    prisma.socialAccount.findMany({
+      where: { workspaceId: workspace.id, active: true },
+      include: { credential: true },
+      orderBy: { createdAt: "asc" },
+    }),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -41,7 +53,14 @@ export default async function ContentPage({ searchParams }: { searchParams: { st
 
       <Card>
         <CardContent className="pt-6">
-          <GeneratePostForm />
+          <GeneratePostForm
+            accounts={accounts.map((account) => ({
+              id: account.id,
+              platform: account.platform,
+              label: `${account.platform} — ${account.username ? `@${account.username}` : account.id}`,
+              mode: resolvePublishMode(account),
+            }))}
+          />
         </CardContent>
       </Card>
 
@@ -73,6 +92,7 @@ export default async function ContentPage({ searchParams }: { searchParams: { st
                       <div className="mb-1 flex items-center gap-2">
                         <Badge tone="muted">{post.platform}</Badge>
                         <Badge tone={STATUS_TONE[post.status]}>{post.status}</Badge>
+                        <PublishModeBadge mode={resolvePublishMode(post.socialAccount)} />
                         {score && <span className="text-xs text-muted-foreground">Score: {score.qualityScore}</span>}
                       </div>
                       <p className="line-clamp-2 text-sm">{post.text}</p>

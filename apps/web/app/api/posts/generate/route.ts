@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { runGenerateContentJob } from "@social-growth-os/worker/jobs";
 import { getDefaultPersona, getDefaultSocialAccount, getDefaultWorkspace } from "../../../../lib/workspace";
+import { prisma } from "../../../../lib/db";
 
-const RequestSchema = z.object({ topic: z.string().min(1) });
+const RequestSchema = z.object({ topic: z.string().min(1), socialAccountId: z.string().optional() });
 
 /**
  * POST /api/posts/generate — Topic -> IdeaGenerator -> tournament -> DB (REVIEW).
@@ -20,8 +21,14 @@ export async function POST(request: Request) {
   const workspace = await getDefaultWorkspace();
   const [persona, socialAccount] = await Promise.all([
     getDefaultPersona(workspace.id),
-    getDefaultSocialAccount(workspace.id),
+    body.data.socialAccountId
+      ? prisma.socialAccount.findUniqueOrThrow({ where: { id: body.data.socialAccountId } })
+      : getDefaultSocialAccount(workspace.id),
   ]);
+
+  if (socialAccount.workspaceId !== workspace.id) {
+    return NextResponse.json({ error: "socialAccountId does not belong to this workspace" }, { status: 400 });
+  }
 
   try {
     const result = await runGenerateContentJob({

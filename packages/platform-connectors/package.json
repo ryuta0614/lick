@@ -14,7 +14,8 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@social-growth-os/shared": "workspace:*"
+    "@social-growth-os/shared": "workspace:*",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@social-growth-os/config": "workspace:*",

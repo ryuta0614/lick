@@ -32,6 +32,9 @@ importers:
       '@social-growth-os/database':
         specifier: workspace:*
         version: link:../../packages/database
+      '@social-growth-os/platform-connectors':
+        specifier: workspace:*
+        version: link:../../packages/platform-connectors
       '@social-growth-os/shared':
         specifier: workspace:*
         version: link:../../packages/shared
@@ -304,6 +307,9 @@ importers:
       '@social-growth-os/shared':
         specifier: workspace:*
         version: link:../shared
+      zod:
+        specifier: ^3.23.8
+        version: 3.25.76
     devDependencies:
       '@social-growth-os/config':
         specifier: workspace:*

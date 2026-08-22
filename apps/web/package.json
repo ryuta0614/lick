@@ -16,6 +16,7 @@
     "@social-growth-os/analytics": "workspace:*",
     "@social-growth-os/content-engine": "workspace:*",
     "@social-growth-os/database": "workspace:*",
+    "@social-growth-os/platform-connectors": "workspace:*",
     "@social-growth-os/shared": "workspace:*",
     "@social-growth-os/worker": "workspace:*",
     "bullmq": "^5.16.0",

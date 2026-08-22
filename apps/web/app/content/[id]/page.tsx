@@ -3,6 +3,8 @@ import { prisma } from "../../../lib/db";
 import { Badge } from "../../../components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/card";
 import { PostActions } from "../../../components/post-actions";
+import { PublishModeBadge } from "../../../components/publish-mode-badge";
+import { resolvePublishMode } from "../../../lib/publish-mode";
 
 export const dynamic = "force-dynamic";
 
@@ -14,19 +16,48 @@ export default async function ContentDetailPage({ params }: { params: { id: stri
       scores: { orderBy: { createdAt: "desc" } },
       variants: { orderBy: { createdAt: "desc" } },
       analytics: { orderBy: { capturedAt: "desc" }, take: 5 },
+      socialAccount: { include: { credential: true } },
     },
   });
 
   if (!post) notFound();
 
   const latestScore = post.scores[0];
+  const publishMode = resolvePublishMode(post.socialAccount);
 
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-2">
         <Badge tone="muted">{post.platform}</Badge>
         <Badge>{post.status}</Badge>
+        <PublishModeBadge mode={publishMode} />
       </div>
+
+      <Card>
+        <CardContent className="pt-6 text-sm">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            <div>
+              <span className="text-muted-foreground">Platform</span>
+              <p className="font-medium">{post.platform}</p>
+            </div>
+            <div>
+              <span className="text-muted-foreground">Account</span>
+              <p className="font-medium">
+                {post.socialAccount.username ? `@${post.socialAccount.username}` : post.socialAccount.id}
+              </p>
+            </div>
+            <div>
+              <span className="text-muted-foreground">Mode</span>
+              <p className="font-medium">{publishMode.replace("_", " ")}</p>
+            </div>
+          </div>
+          {publishMode === "REAL" && (
+            <p className="mt-3 rounded-md bg-red-50 p-2 text-xs text-destructive">
+              Publishing/approving this post will post to a REAL Threads account. This is not reversible via this app.
+            </p>
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

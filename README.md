@@ -4,11 +4,11 @@ AI-powered autonomous social media growth system (X / Threads / Instagram). See
 [`CLAUDE.md`](./CLAUDE.md) for the full product spec — this README covers
 running the MVP backbone locally.
 
-**Current status**: Phase 1 (Mock MVP) is complete and verified end-to-end —
-Topic → Idea → Content → Review → Approve → Schedule → Publish (mock) → Mock
-Analytics → Dashboard. Every platform is backed by `MockPlatformAdapter`; no
-real SNS credentials are used yet (see `packages/platform-connectors/src/{x,threads,instagram}`
-for the real-adapter stubs planned for later phases).
+**Current status**: Phase 1 (Mock MVP) is complete and verified end-to-end.
+Phase 2 adds a real Threads connection (OAuth, text publishing, insights)
+behind the same pipeline, gated off by default — see "Threads connection"
+below. X and Instagram still use `MockPlatformAdapter` only
+(`packages/platform-connectors/src/{x,instagram}` are stubs for later phases).
 
 ## Stack
 
@@ -78,6 +78,66 @@ analytics-collection jobs at `ANALYTICS_COLLECTION_DELAYS_HOURS` (defaults to
 See [`.env.example`](./.env.example). Never commit a real `.env` — all
 `.env*` files are gitignored.
 
+## Threads connection (Phase 2)
+
+By default the app publishes nothing for real: `PLATFORM_MODE=mock` routes
+every platform (including Threads) through `MockPlatformAdapter`, and even
+if you flip Threads to `real`, `THREADS_DRY_RUN=true` still stops short of
+the live publish call. **Both** must be changed deliberately to actually
+post to Threads — see step 8 below.
+
+> The exact endpoints/OAuth flow below were verified against several
+> independent, current (2026) third-party developer guides for the Threads
+> API, cross-checked against each other, because `developers.facebook.com`
+> was not reachable from this environment to confirm directly. **Meta's
+> dashboard UI (menu names, product/use-case picker) changes over time and
+> was not verified here** — follow Meta's current in-app instructions for
+> the console navigation; only the API/OAuth mechanics below are
+> load-bearing in the code.
+
+1. **Create a Meta Developer App** at [developers.facebook.com/apps](https://developers.facebook.com/apps) (an
+   Individual/Business Meta Developer account is required). Note the **App
+   ID** and **App Secret** from the app's Basic Settings.
+2. **Add the Threads API** to the app (Meta's console offers it as a
+   product/use case you add to an existing app — the exact button label may
+   have changed; look for "Threads API" or "Threads" under the products the
+   console offers to add).
+3. **Set the callback/redirect URL** in the Threads product's OAuth
+   settings to exactly match `THREADS_REDIRECT_URI` below, e.g.
+   `https://your-domain.example/api/accounts/threads/callback` (or
+   `http://localhost:3000/api/accounts/threads/callback` for local testing,
+   if Meta's console accepts a localhost redirect for your app type — if
+   not, tunnel `apps/web` through an HTTPS URL, e.g. with a reverse proxy).
+4. **Set env vars** in `.env` (and copy to `apps/web/.env`, `apps/worker/.env`,
+   `packages/database/.env` per the Setup section above):
+   ```
+   META_APP_ID=<your app id>
+   META_APP_SECRET=<your app secret>
+   THREADS_REDIRECT_URI=<the exact URL registered in step 3>
+   PLATFORM_MODE=mock
+   THREADS_DRY_RUN=true
+   ```
+5. **Start the app**: `pnpm dev` (runs `apps/web` + `apps/worker`).
+6. **Connect Threads**: go to `/settings/accounts` and click **Connect
+   Threads**. You'll be redirected to Meta to authorize, then back to
+   `/settings/accounts?connected=threads`. This stores the account
+   (`SocialAccount`, platform `THREADS`) and its encrypted long-lived token
+   (`PlatformCredential.accessTokenEnc`, AES-256-GCM via `ENCRYPTION_KEY`).
+7. **Confirm dry-run behavior**: set `PLATFORM_MODE=real` (keep
+   `THREADS_DRY_RUN=true`), restart `apps/worker`, then generate → approve →
+   publish a post from `/content`. The worker creates a real Threads media
+   *container* (harmless — nothing goes live) but never calls
+   `/threads_publish`; the post still ends up `PUBLISHED` in this app with
+   an `externalId` prefixed `dryrun_`, and the Content pages show a **REAL
+   (DRY RUN)** badge throughout.
+8. **Switch to live publishing**: only after confirming step 7, set
+   `THREADS_DRY_RUN=false` and restart the worker. From here, an
+   **Approve** + **Publish now**/**Schedule** on a Threads post targeting a
+   real, connected account with `approvalMode=MANUAL` will post for real —
+   the Content pages show a **REAL** badge with a red confirmation notice
+   before you approve. `SEMI_AUTO`/`AUTO` accounts are never allowed to
+   publish for real in this phase (CLAUDE.md STEP 15).
+
 ## Quality checks
 
 ```bash
@@ -96,3 +156,6 @@ are used throughout.
 - **Duplicate-publish prevention**: `Post` has a unique `(socialAccountId, contentHash)` constraint, so a retried publish job can never create a second live post for the same text.
 - **AI generation never publishes directly**: `packages/content-engine` only writes `Post` rows in `REVIEW`; `apps/worker/src/jobs/publish-post.ts` is the only code path that calls a `SocialPlatformAdapter`.
 - **BullMQ queues** (`packages/shared/src/queue-contract.ts`): `content-generation`, `content-publishing`, `analytics-collection`, `trend-collection`, `strategy-analysis`.
+- **Adapter resolution** (`apps/worker/src/platform-adapters.ts`): `getPlatformAdapter(account)` returns `MockPlatformAdapter` for X/Instagram always, and for Threads unless `PLATFORM_MODE`/`THREADS_PLATFORM_MODE=real` **and** the account has a valid, non-expired credential **and** `approvalMode=MANUAL` — otherwise it throws rather than silently falling back to mock.
+- **Error taxonomy & retries** (`packages/shared/src/errors.ts`): `PlatformAuthError`/`PlatformValidationError` are non-retryable; `PlatformRateLimitError`/`PlatformServerError` are retryable (`isRetryableError`). `apps/worker` throws BullMQ's `UnrecoverableError` for non-retryable failures so they don't waste retry attempts.
+- **Publish safety** (`apps/worker/src/jobs/publish-post.ts`): beyond the `(socialAccountId, contentHash)` unique constraint, a worker crash between a successful Threads publish call and the DB write is handled explicitly — resuming from `PUBLISHING` with an `externalId` already recorded finishes the transition without a new API call; resuming with no `externalId` is treated as ambiguous and fails loudly (no invented idempotency key) rather than risking a duplicate live post.

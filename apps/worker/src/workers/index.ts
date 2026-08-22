@@ -42,7 +42,13 @@ export function startWorkers(): Worker[] {
   const contentPublishingWorker = new Worker(
     QUEUE_NAMES.contentPublishing,
     withLogging(QUEUE_NAMES.contentPublishing, async (job) => {
-      if (job.name === JOB_NAMES.publishPost) return runPublishPostJob(job.data);
+      if (job.name === JOB_NAMES.publishPost) {
+        return runPublishPostJob(job.data, {
+          attemptsMade: job.attemptsMade,
+          maxAttempts: job.opts.attempts ?? 1,
+          externalJobId: job.id,
+        });
+      }
       throw new Error(`Unknown job "${job.name}" on queue ${QUEUE_NAMES.contentPublishing}`);
     }),
     { connection },
@@ -51,7 +57,9 @@ export function startWorkers(): Worker[] {
   const analyticsCollectionWorker = new Worker(
     QUEUE_NAMES.analyticsCollection,
     withLogging(QUEUE_NAMES.analyticsCollection, async (job) => {
-      if (job.name === JOB_NAMES.collectPostAnalytics) return runCollectPostAnalyticsJob(job.data);
+      if (job.name === JOB_NAMES.collectPostAnalytics) {
+        return runCollectPostAnalyticsJob(job.data, { attemptsMade: job.attemptsMade, externalJobId: job.id });
+      }
       throw new Error(`Unknown job "${job.name}" on queue ${QUEUE_NAMES.analyticsCollection}`);
     }),
     { connection },

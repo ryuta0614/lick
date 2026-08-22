@@ -1,6 +1,6 @@
 type LogFields = Record<string, unknown>;
 
-const SECRET_KEY_PATTERN = /token|secret|password|apikey|api_key|credential/i;
+const SECRET_KEY_PATTERN = /token|secret|password|apikey|api_key|credential|authorization|bearer/i;
 
 function redact(fields: LogFields): LogFields {
   const redacted: LogFields = {};

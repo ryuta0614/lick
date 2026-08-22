@@ -9,6 +9,8 @@ export type PublishedPost = {
   externalId: string;
   url?: string;
   publishedAt: Date;
+  /** True when a container/draft was created but the live publish call was skipped (CLAUDE.md STEP 16 dry-run mode). */
+  dryRun?: boolean;
 };
 
 export type NormalizedPost = PublishedPost & {
