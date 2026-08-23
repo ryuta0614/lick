@@ -4,6 +4,7 @@ export const OAUTH_STATE_COOKIE_NAME = "threads_oauth_state";
 /** X's OAuth flow additionally needs a PKCE code_verifier cookie — see lib/pkce.ts and X_PKCE_VERIFIER_COOKIE_NAME below. */
 export const X_OAUTH_STATE_COOKIE_NAME = "x_oauth_state";
 export const X_PKCE_VERIFIER_COOKIE_NAME = "x_pkce_verifier";
+export const INSTAGRAM_OAUTH_STATE_COOKIE_NAME = "instagram_oauth_state";
 const STATE_TTL_SECONDS = 10 * 60; // short-lived per CLAUDE.md STEP 6
 
 function getStateSecret(): string {

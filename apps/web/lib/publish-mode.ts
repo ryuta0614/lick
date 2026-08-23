@@ -1,18 +1,20 @@
-import { getThreadsPlatformMode, getXPlatformMode } from "@social-growth-os/platform-connectors";
+import { getInstagramPlatformMode, getThreadsPlatformMode, getXPlatformMode } from "@social-growth-os/platform-connectors";
 import type { ApprovalMode, Platform } from "@social-growth-os/shared";
 
 export type PublishMode = "MOCK" | "REAL" | "REAL_DRY_RUN" | "REAL_BLOCKED";
 
-const REAL_CAPABLE_PLATFORMS = ["THREADS", "X"] as const;
+const REAL_CAPABLE_PLATFORMS = ["THREADS", "X", "INSTAGRAM"] as const;
 
 const PLATFORM_MODE_RESOLVERS: Record<(typeof REAL_CAPABLE_PLATFORMS)[number], () => "mock" | "real"> = {
   THREADS: getThreadsPlatformMode,
   X: getXPlatformMode,
+  INSTAGRAM: getInstagramPlatformMode,
 };
 
 const DRY_RUN_ENV_VARS: Record<(typeof REAL_CAPABLE_PLATFORMS)[number], string> = {
   THREADS: "THREADS_DRY_RUN",
   X: "X_DRY_RUN",
+  INSTAGRAM: "INSTAGRAM_DRY_RUN",
 };
 
 /**

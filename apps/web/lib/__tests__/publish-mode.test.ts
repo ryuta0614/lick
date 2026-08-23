@@ -8,12 +8,7 @@ describe("resolvePublishMode", () => {
     process.env = { ...ORIGINAL_ENV };
   });
 
-  it("is always MOCK for Instagram (Phase 4, not built yet)", () => {
-    const mode = resolvePublishMode({ platform: "INSTAGRAM", approvalMode: "MANUAL", credential: null });
-    expect(mode).toBe("MOCK");
-  });
-
-  for (const platform of ["THREADS", "X"] as const) {
+  for (const platform of ["THREADS", "X", "INSTAGRAM"] as const) {
     describe(`${platform}`, () => {
       beforeEach(() => {
         process.env[`${platform}_PLATFORM_MODE`] = "real";

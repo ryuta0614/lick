@@ -3,10 +3,13 @@ import { prisma } from "@social-growth-os/database";
 import { decryptSecret, PlatformAuthError } from "@social-growth-os/shared";
 import {
   createMockPlatformAdapters,
+  getInstagramConfigFromEnv,
+  getInstagramPlatformMode,
   getThreadsConfigFromEnv,
   getThreadsPlatformMode,
   getXConfigFromEnv,
   getXPlatformMode,
+  InstagramAdapter,
   ThreadsAdapter,
   XAdapter,
   type FetchImpl,
@@ -19,13 +22,11 @@ const mockAdapters = createMockPlatformAdapters();
 
 /**
  * Resolves which adapter a publish/analytics job should use for a given
- * account (CLAUDE.md STEP 8):
- *   - INSTAGRAM: always MockPlatformAdapter (Phase 4, not built yet).
- *   - THREADS / X: MockPlatformAdapter unless that platform's own
- *     *_PLATFORM_MODE (falling back to the global PLATFORM_MODE) is "real"
- *     AND the account has a usable, non-expired credential AND its
- *     approvalMode is MANUAL (CLAUDE.md STEP 15 — no real publishing for
- *     SEMI_AUTO/AUTO accounts yet).
+ * account (CLAUDE.md STEP 8): MockPlatformAdapter unless that platform's own
+ * *_PLATFORM_MODE (falling back to the global PLATFORM_MODE) is "real" AND
+ * the account has a usable, non-expired credential AND its approvalMode is
+ * MANUAL (CLAUDE.md STEP 15 — no real publishing for SEMI_AUTO/AUTO
+ * accounts yet).
  *
  * Throws PlatformAuthError (never silently falls back to Mock) when "real"
  * mode is requested but the account isn't actually usable — a human
@@ -40,6 +41,9 @@ export function getPlatformAdapter(
   }
   if (account.platform === "X") {
     return resolveXAdapter(account, options);
+  }
+  if (account.platform === "INSTAGRAM") {
+    return resolveInstagramAdapter(account, options);
   }
   return mockAdapters[account.platform];
 }
@@ -74,6 +78,26 @@ function resolveXAdapter(account: SocialAccountWithCredential, options: { fetchI
   return new XAdapter({
     accessToken: decryptSecret(credential.accessTokenEnc),
     apiBaseUrl: config.apiBaseUrl,
+    dryRun: config.dryRun,
+    fetchImpl: options.fetchImpl,
+  });
+}
+
+function resolveInstagramAdapter(
+  account: SocialAccountWithCredential,
+  options: { fetchImpl?: FetchImpl },
+): SocialPlatformAdapter {
+  if (getInstagramPlatformMode() !== "real") {
+    return mockAdapters.INSTAGRAM;
+  }
+
+  const credential = requireUsableCredential(account, "Instagram");
+  const config = getInstagramConfigFromEnv();
+  return new InstagramAdapter({
+    igUserId: account.externalId,
+    accessToken: decryptSecret(credential.accessTokenEnc),
+    apiBaseUrl: config.apiBaseUrl,
+    apiVersion: config.apiVersion,
     dryRun: config.dryRun,
     fetchImpl: options.fetchImpl,
   });

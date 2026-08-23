@@ -3,7 +3,7 @@ import { getDefaultWorkspace } from "../../../lib/workspace";
 import { Card, CardContent } from "../../../components/ui/card";
 import { Badge } from "../../../components/ui/badge";
 import { DisconnectAccountButton } from "../../../components/account-actions";
-import { getThreadsPlatformMode, getXPlatformMode } from "@social-growth-os/platform-connectors";
+import { getInstagramPlatformMode, getThreadsPlatformMode, getXPlatformMode } from "@social-growth-os/platform-connectors";
 
 export const dynamic = "force-dynamic";
 
@@ -18,18 +18,27 @@ const ERROR_MESSAGES: Record<string, string> = {
   x_invalid_state: "OAuth state validation failed (possible CSRF attempt or expired session) — please try connecting again.",
   x_not_configured: "X is not configured: set X_CLIENT_ID and X_REDIRECT_URI (X_CLIENT_SECRET only if using a confidential app).",
   x_connect_failed: "Failed to complete the X connection. Check server logs for details.",
+  instagram_denied: "Instagram authorization was cancelled or denied.",
+  instagram_invalid_callback: "Instagram callback was missing required parameters.",
+  instagram_invalid_state: "OAuth state validation failed (possible CSRF attempt or expired session) — please try connecting again.",
+  instagram_not_configured: "Instagram is not configured: set META_APP_ID, META_APP_SECRET and INSTAGRAM_REDIRECT_URI.",
+  instagram_no_linked_account:
+    "No Facebook Page with a linked Instagram Business/Creator Account was found for this login. Link an Instagram Professional account to a Facebook Page you manage, then try again.",
+  instagram_connect_failed: "Failed to complete the Instagram connection. Check server logs for details.",
 };
 
-const CONNECTABLE_PLATFORMS = ["THREADS", "X"] as const;
+const CONNECTABLE_PLATFORMS = ["THREADS", "X", "INSTAGRAM"] as const;
 
 const CONNECT_URLS: Record<(typeof CONNECTABLE_PLATFORMS)[number], string> = {
   THREADS: "/api/accounts/threads/connect",
   X: "/api/accounts/x/connect",
+  INSTAGRAM: "/api/accounts/instagram/connect",
 };
 
 const PLATFORM_LABELS: Record<(typeof CONNECTABLE_PLATFORMS)[number], string> = {
   THREADS: "Threads",
   X: "X",
+  INSTAGRAM: "Instagram",
 };
 
 export default async function AccountSettingsPage({
@@ -47,10 +56,12 @@ export default async function AccountSettingsPage({
   const platformModes: Record<(typeof CONNECTABLE_PLATFORMS)[number], "mock" | "real"> = {
     THREADS: getThreadsPlatformMode(),
     X: getXPlatformMode(),
+    INSTAGRAM: getInstagramPlatformMode(),
   };
   const dryRunEnvVars: Record<(typeof CONNECTABLE_PLATFORMS)[number], string> = {
     THREADS: "THREADS_DRY_RUN",
     X: "X_DRY_RUN",
+    INSTAGRAM: "INSTAGRAM_DRY_RUN",
   };
 
   const connectedLabel = connectedPlatformLabel(searchParams.connected);
@@ -60,7 +71,9 @@ export default async function AccountSettingsPage({
       <div>
         <h1 className="text-2xl font-semibold">Platform Connections</h1>
         <p className="text-sm text-muted-foreground">
-          Instagram still uses MockPlatformAdapter (Phase 4). Threads and X can be connected for real publishing.
+          Threads, X, and Instagram can all be connected for real publishing. Instagram requires image content —
+          this account&apos;s content pipeline is currently text-only, so Instagram posts will fail validation until
+          image generation/hosting is added.
         </p>
       </div>
 

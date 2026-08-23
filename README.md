@@ -5,12 +5,21 @@ AI-powered autonomous social media growth system (X / Threads / Instagram). See
 running the MVP backbone locally.
 
 **Current status**: Phase 1 (Mock MVP) is complete and verified end-to-end.
-Phase 2 adds a real Threads connection (OAuth, text publishing, insights),
-and Phase 3 adds a real X connection (OAuth 2.0 + PKCE, tweet publishing,
-delete, public metrics) — both behind the same pipeline, gated off by
-default; see "Threads connection" and "X connection" below. Instagram still
-uses `MockPlatformAdapter` only (`packages/platform-connectors/src/instagram`
-is a stub for a later phase).
+Phase 2 adds a real Threads connection (OAuth, text publishing, insights);
+Phase 3 adds real X (OAuth 2.0 + PKCE, tweet publishing, delete, public
+metrics) and Instagram (Facebook Login for Business, image/carousel
+publishing via the Content Publishing API, insights) connections — all
+behind the same pipeline, gated off by default; see "Threads connection",
+"X connection", and "Instagram connection" below.
+
+**Instagram caveat**: Instagram's Content Publishing API has no text-only
+post type — every post needs at least one image, referenced by a publicly
+reachable URL. This repo's content-generation pipeline is currently
+text-only (no image generation/hosting wired up yet — see CLAUDE.md section
+5 for the planned S3/R2 storage), so a real-mode Instagram publish attempt
+fails validation loudly rather than silently no-op'ing or guessing at a
+workaround. OAuth connection and the publish/insights mechanics are fully
+implemented and tested against mocked HTTP; only image content is missing.
 
 ## Stack
 
@@ -197,6 +206,64 @@ storage, dry run, real text publish (`X_DRY_RUN=false`), `externalId`
 matching a real tweet id, the tweet actually visible on x.com, analytics
 fetched (`public_metrics`), snapshot saved, dashboard reflects it.
 
+## Instagram connection (Phase 3)
+
+Same safety model as Threads/X above: `PLATFORM_MODE=mock` (or
+`INSTAGRAM_PLATFORM_MODE=mock`) routes Instagram through
+`MockPlatformAdapter`, and even in `real` mode, `INSTAGRAM_DRY_RUN=true`
+(the default) never calls the live publish endpoint. **Both** must be
+changed deliberately to post to Instagram for real.
+
+Instagram Content Publishing has no text-only post type and always
+publishes through a **Facebook Page's** access token, not a user token —
+so OAuth here is **Facebook Login for Business**: it authenticates a
+Facebook user, discovers which of their Pages has a linked Instagram
+Professional (Business/Creator) account, and stores that Page's access
+token. It reuses `META_APP_ID`/`META_APP_SECRET` (the same Meta Developer
+App as Threads) — only `INSTAGRAM_REDIRECT_URI` is new.
+
+> As with the Threads section above, the exact OAuth/Content Publishing
+> mechanics were implemented against documented Graph API behavior, but
+> Meta's dashboard UI and API version numbers change over time — verify
+> `INSTAGRAM_API_VERSION` and the console navigation against Meta's current
+> docs before relying on this in production.
+
+1. **Reuse (or create) the same Meta Developer App** as Threads, and add the
+   **Facebook Login for Business** product to it.
+2. **Set the callback URL** in that product's settings to exactly match
+   `INSTAGRAM_REDIRECT_URI` below, e.g.
+   `https://your-domain.example/api/accounts/instagram/callback`.
+3. **Make sure the target Instagram account is a Professional account**
+   (Business or Creator, not Personal) **linked to a Facebook Page** you
+   manage — this is a prerequisite of Instagram's Content Publishing API,
+   not something this app can set up for you.
+4. **Set env vars** in `.env` (and copy to `apps/web/.env`, `apps/worker/.env`,
+   `packages/database/.env`):
+   ```
+   META_APP_ID=<your app id>
+   META_APP_SECRET=<your app secret>
+   INSTAGRAM_REDIRECT_URI=<the exact URL registered in step 2>
+   PLATFORM_MODE=mock
+   INSTAGRAM_DRY_RUN=true
+   ```
+5. **Start the app**: `pnpm dev`.
+6. **Connect Instagram**: go to `/settings/accounts` and click **Connect
+   Instagram**. You'll be redirected to Facebook to authorize, then back to
+   `/settings/accounts?connected=instagram`. This discovers your first
+   Facebook Page with a linked Instagram Business Account, and stores that
+   Page's encrypted access token (`PlatformCredential.accessTokenEnc`). If
+   no Page has a linked Instagram Professional account, you'll land back
+   with `?error=instagram_no_linked_account`.
+7. **Image content required**: because this repo's content pipeline is
+   text-only today, a real publish attempt will fail
+   `validateContent`/`ContentValidationError` immediately (no network call)
+   with a message naming the missing `mediaUrls`. The container-creation →
+   `media_publish` mechanics themselves (single image and carousel) are
+   implemented and covered by mocked-HTTP tests in
+   `packages/platform-connectors/src/instagram/__tests__/adapter.test.ts` —
+   only wiring in real image URLs (S3/R2 hosting, CLAUDE.md section 5) is
+   left before this can post for real end-to-end.
+
 ### Manual real-Threads validation checklist (human only)
 
 **Claude Code must never execute any of the steps below itself.** Every
@@ -261,6 +328,8 @@ are used throughout.
 - **Adapter resolution** (`apps/worker/src/platform-adapters.ts`): `getPlatformAdapter(account)` returns `MockPlatformAdapter` for Instagram always, and for Threads/X unless that platform's `PLATFORM_MODE`/`{THREADS,X}_PLATFORM_MODE=real` **and** the account has a valid, non-expired credential **and** `approvalMode=MANUAL` — otherwise it throws rather than silently falling back to mock. `apps/web/lib/publish-mode.ts` mirrors the same gate for the UI.
 - **XAdapter vs ThreadsAdapter** (`packages/platform-connectors/src/{x,threads}/adapter.ts`): X's Tweets API is a single `POST /2/tweets` call with officially documented `DELETE`/`GET` support, so `XAdapter` implements the full `SocialPlatformAdapter` surface (`deletePost`/`getPost` included) — unlike `ThreadsAdapter`, which throws `PlatformUnsupportedOperationError` for those two because Threads' behavior there isn't verified against official docs. X also has no safe partial step like Threads' "create a container" — `X_DRY_RUN` skips calling the X API entirely rather than creating-but-not-publishing.
 - **X OAuth (PKCE)** (`apps/web/lib/pkce.ts`, `packages/platform-connectors/src/x/oauth.ts`): X requires OAuth 2.0 Authorization Code + PKCE for every app. `generatePkcePair()` produces a `code_verifier`/`code_challenge` pair; the verifier is held in a short-lived httpOnly cookie (`X_PKCE_VERIFIER_COOKIE_NAME`) alongside the CSRF `state` cookie until the callback completes the token exchange.
+- **InstagramAdapter's mediaUrls requirement** (`packages/platform-connectors/src/instagram/adapter.ts`): Instagram's Content Publishing API has no text-only post type, so `validateContent` throws `ContentValidationError` immediately (no network call) whenever `PublishPostInput.mediaUrls` is empty — which is always, today, since the content pipeline doesn't generate/host images yet. `publishPost` supports both the single-image flow (`POST /media` → `POST /media_publish`) and the carousel flow (create each child container, then a parent `media_type=CAROUSEL` container referencing them, then publish).
+- **Instagram OAuth (Facebook Login for Business)** (`packages/platform-connectors/src/instagram/oauth.ts`): unlike Threads/X, Instagram Content Publishing calls must use a **Page-scoped** access token, not a user token. The callback exchanges the code for a user token, upgrades it to a long-lived one, then calls `GET /me/accounts` to find a Facebook Page with a linked `instagram_business_account` — that Page's access token (not the user token) is what gets encrypted and stored.
 - **Error taxonomy & retries** (`packages/shared/src/errors.ts`): `PlatformAuthError`/`PlatformValidationError` are non-retryable; `PlatformRateLimitError`/`PlatformServerError` are retryable (`isRetryableError`). `apps/worker` throws BullMQ's `UnrecoverableError` for non-retryable failures so they don't waste retry attempts.
 - **Publish safety** (`apps/worker/src/jobs/publish-post.ts`): beyond the `(socialAccountId, contentHash)` unique constraint, a worker crash between a successful Threads publish call and the DB write is handled explicitly — resuming from `PUBLISHING` with an `externalId` already recorded finishes the transition without a new API call; resuming with no `externalId` is treated as ambiguous and fails loudly (no invented idempotency key) rather than risking a duplicate live post.
 - **Learning Engine** (`packages/analytics/src/learning/`): `extractPostFeatures()` derives platform/topic/hookType/emotion/contentType/CTA/textLength/lengthBucket/weekday/postingHour from each published `Post` (mostly computed on the fly, not stored — only `Post.cta` was added as a genuinely new column). `analyzeAccountPerformance()` groups by dimension, compares each bucket's median against the account-wide median (`relativeLift`), and tags every bucket with a confidence tier (`INSUFFICIENT_DATA` &lt;5, `LOW` 5-9, `MEDIUM` 10-29, `HIGH` 30+, all configurable). Below 5 measured posts the whole analysis is flagged `coldStart` and the system explicitly reports "not enough data" rather than inventing a pattern.
