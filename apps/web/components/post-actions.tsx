@@ -21,12 +21,14 @@ export function PostActions({
   postId,
   status,
   isRealPublish,
+  platform,
   username,
 }: {
   postId: string;
   status: PostStatus;
-  /** True when this post targets a real, connected Threads account with dry-run off (CLAUDE.md Phase 2.5 STEP 2). */
+  /** True when this post targets a real, connected account with dry-run off (CLAUDE.md Phase 2.5 STEP 2). */
   isRealPublish?: boolean;
+  platform?: string;
   username?: string;
 }) {
   const router = useRouter();
@@ -51,7 +53,7 @@ export function PostActions({
     <div className="space-y-3">
       {status === "APPROVED" && isRealPublish && (
         <p className="rounded-md border border-destructive bg-red-50 p-2 text-sm font-bold text-destructive">
-          ⚠ REAL THREADS POST @{username} — this will publish to the real Threads account, right now.
+          ⚠ REAL {platform} POST @{username} — this will publish to the real {platform} account, right now.
         </p>
       )}
 

@@ -5,10 +5,12 @@ AI-powered autonomous social media growth system (X / Threads / Instagram). See
 running the MVP backbone locally.
 
 **Current status**: Phase 1 (Mock MVP) is complete and verified end-to-end.
-Phase 2 adds a real Threads connection (OAuth, text publishing, insights)
-behind the same pipeline, gated off by default — see "Threads connection"
-below. X and Instagram still use `MockPlatformAdapter` only
-(`packages/platform-connectors/src/{x,instagram}` are stubs for later phases).
+Phase 2 adds a real Threads connection (OAuth, text publishing, insights),
+and Phase 3 adds a real X connection (OAuth 2.0 + PKCE, tweet publishing,
+delete, public metrics) — both behind the same pipeline, gated off by
+default; see "Threads connection" and "X connection" below. Instagram still
+uses `MockPlatformAdapter` only (`packages/platform-connectors/src/instagram`
+is a stub for a later phase).
 
 ## Stack
 
@@ -138,6 +140,63 @@ post to Threads — see step 8 below.
    before you approve. `SEMI_AUTO`/`AUTO` accounts are never allowed to
    publish for real in this phase (CLAUDE.md STEP 15).
 
+## X connection (Phase 3)
+
+Same safety model as Threads above: `PLATFORM_MODE=mock` (or
+`X_PLATFORM_MODE=mock`) routes X through `MockPlatformAdapter`, and even in
+`real` mode, `X_DRY_RUN=true` (the default) never calls the live X API.
+**Both** must be changed deliberately to post to X for real.
+
+Unlike Threads, X requires OAuth 2.0 **Authorization Code + PKCE** for
+every app (confidential or public), and a tweet is a single `POST
+/2/tweets` call — there's no separate "create a container, then publish"
+step to safely stop at, so `X_DRY_RUN` skips calling the X API entirely
+rather than creating-but-not-publishing.
+
+1. **Create an X app** at the [X Developer Portal](https://developer.x.com/) with **OAuth 2.0** enabled. Note the **Client ID**
+   (and **Client Secret**, only if you chose a "confidential" app type —
+   a "public" app has no secret and relies on PKCE alone; both work here).
+2. **Set the callback URL** in the app's OAuth 2.0 settings to exactly match
+   `X_REDIRECT_URI` below, e.g.
+   `https://your-domain.example/api/accounts/x/callback`.
+3. **Set env vars** in `.env` (and copy to `apps/web/.env`, `apps/worker/.env`,
+   `packages/database/.env`):
+   ```
+   X_CLIENT_ID=<your client id>
+   X_CLIENT_SECRET=<your client secret, or leave blank for a public app>
+   X_REDIRECT_URI=<the exact URL registered in step 2>
+   PLATFORM_MODE=mock
+   X_DRY_RUN=true
+   ```
+4. **Start the app**: `pnpm dev`.
+5. **Connect X**: go to `/settings/accounts` and click **Connect X**. You'll
+   be redirected to X to authorize, then back to
+   `/settings/accounts?connected=x`. This stores the account
+   (`SocialAccount`, platform `X`) and its encrypted access/refresh tokens
+   (`PlatformCredential.accessTokenEnc`/`refreshTokenEnc`, AES-256-GCM via
+   `ENCRYPTION_KEY`).
+6. **Confirm dry-run behavior**: set `PLATFORM_MODE=real` (keep
+   `X_DRY_RUN=true`), restart `apps/worker`, then generate → approve →
+   publish a post from `/content`. The worker never calls the real X API;
+   the post still ends up `PUBLISHED` in this app with an `externalId`
+   prefixed `dryrun_`, and the Content pages show a **REAL (DRY RUN)**
+   badge throughout.
+7. **Switch to live publishing**: only after confirming step 6, set
+   `X_DRY_RUN=false` and restart the worker. From here, an **Approve** +
+   **Publish now**/**Schedule** on an X post targeting a real, connected
+   account with `approvalMode=MANUAL` will post for real — the Content
+   pages show a **REAL** badge with a red confirmation notice before you
+   approve. `SEMI_AUTO`/`AUTO` accounts are never allowed to publish for
+   real in this phase (CLAUDE.md STEP 15).
+
+**Manual real-X validation (human only, same rule as Threads below):**
+Claude Code must never execute the real-publish step. Run through the same
+checklist as Threads below with X's equivalents — OAuth success (redirected
+back with `?connected=x`), `@username` fetched, encrypted credential
+storage, dry run, real text publish (`X_DRY_RUN=false`), `externalId`
+matching a real tweet id, the tweet actually visible on x.com, analytics
+fetched (`public_metrics`), snapshot saved, dashboard reflects it.
+
 ### Manual real-Threads validation checklist (human only)
 
 **Claude Code must never execute any of the steps below itself.** Every
@@ -199,7 +258,9 @@ are used throughout.
 - **Duplicate-publish prevention**: `Post` has a unique `(socialAccountId, contentHash)` constraint, so a retried publish job can never create a second live post for the same text.
 - **AI generation never publishes directly**: `packages/content-engine` only writes `Post` rows in `REVIEW`; `apps/worker/src/jobs/publish-post.ts` is the only code path that calls a `SocialPlatformAdapter`.
 - **BullMQ queues** (`packages/shared/src/queue-contract.ts`): `content-generation`, `content-publishing`, `analytics-collection`, `trend-collection`, `strategy-analysis`.
-- **Adapter resolution** (`apps/worker/src/platform-adapters.ts`): `getPlatformAdapter(account)` returns `MockPlatformAdapter` for X/Instagram always, and for Threads unless `PLATFORM_MODE`/`THREADS_PLATFORM_MODE=real` **and** the account has a valid, non-expired credential **and** `approvalMode=MANUAL` — otherwise it throws rather than silently falling back to mock.
+- **Adapter resolution** (`apps/worker/src/platform-adapters.ts`): `getPlatformAdapter(account)` returns `MockPlatformAdapter` for Instagram always, and for Threads/X unless that platform's `PLATFORM_MODE`/`{THREADS,X}_PLATFORM_MODE=real` **and** the account has a valid, non-expired credential **and** `approvalMode=MANUAL` — otherwise it throws rather than silently falling back to mock. `apps/web/lib/publish-mode.ts` mirrors the same gate for the UI.
+- **XAdapter vs ThreadsAdapter** (`packages/platform-connectors/src/{x,threads}/adapter.ts`): X's Tweets API is a single `POST /2/tweets` call with officially documented `DELETE`/`GET` support, so `XAdapter` implements the full `SocialPlatformAdapter` surface (`deletePost`/`getPost` included) — unlike `ThreadsAdapter`, which throws `PlatformUnsupportedOperationError` for those two because Threads' behavior there isn't verified against official docs. X also has no safe partial step like Threads' "create a container" — `X_DRY_RUN` skips calling the X API entirely rather than creating-but-not-publishing.
+- **X OAuth (PKCE)** (`apps/web/lib/pkce.ts`, `packages/platform-connectors/src/x/oauth.ts`): X requires OAuth 2.0 Authorization Code + PKCE for every app. `generatePkcePair()` produces a `code_verifier`/`code_challenge` pair; the verifier is held in a short-lived httpOnly cookie (`X_PKCE_VERIFIER_COOKIE_NAME`) alongside the CSRF `state` cookie until the callback completes the token exchange.
 - **Error taxonomy & retries** (`packages/shared/src/errors.ts`): `PlatformAuthError`/`PlatformValidationError` are non-retryable; `PlatformRateLimitError`/`PlatformServerError` are retryable (`isRetryableError`). `apps/worker` throws BullMQ's `UnrecoverableError` for non-retryable failures so they don't waste retry attempts.
 - **Publish safety** (`apps/worker/src/jobs/publish-post.ts`): beyond the `(socialAccountId, contentHash)` unique constraint, a worker crash between a successful Threads publish call and the DB write is handled explicitly — resuming from `PUBLISHING` with an `externalId` already recorded finishes the transition without a new API call; resuming with no `externalId` is treated as ambiguous and fails loudly (no invented idempotency key) rather than risking a duplicate live post.
 - **Learning Engine** (`packages/analytics/src/learning/`): `extractPostFeatures()` derives platform/topic/hookType/emotion/contentType/CTA/textLength/lengthBucket/weekday/postingHour from each published `Post` (mostly computed on the fly, not stored — only `Post.cta` was added as a genuinely new column). `analyzeAccountPerformance()` groups by dimension, compares each bucket's median against the account-wide median (`relativeLift`), and tags every bucket with a confidence tier (`INSUFFICIENT_DATA` &lt;5, `LOW` 5-9, `MEDIUM` 10-29, `HIGH` 30+, all configurable). Below 5 measured posts the whole analysis is flagged `coldStart` and the system explicitly reports "not enough data" rather than inventing a pattern.
